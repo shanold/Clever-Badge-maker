@@ -1,9 +1,9 @@
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
+import PdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?worker';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { BrowserQRCodeReader } from '@zxing/browser';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
+pdfjsLib.GlobalWorkerOptions.workerPort = new PdfWorker();
 
 const pdfInput = document.querySelector('#pdfInput');
 const logoInput = document.querySelector('#logoInput');
