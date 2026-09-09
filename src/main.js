@@ -37,6 +37,10 @@ const clearBackgroundImageBtn = $('#clearBackgroundImageBtn');
 const textColorControls = $('#textColorControls');
 const autoTextColor = $('#autoTextColor');
 const manualTextColor = $('#manualTextColor');
+const textShadowEnabled = $('#textShadowEnabled');
+const textShadowColor = $('#textShadowColor');
+const textShadowSize = $('#textShadowSize');
+const textShadowSizeValue = $('#textShadowSizeValue');
 
 let badges = [];
 let logoDataUrl = null;
@@ -80,9 +84,9 @@ const defaults = structuredClone(layoutPresets.portrait);
 let layout = structuredClone(defaults);
 const labels = { qr:'QR code', name:'Student name', school:'School name', logo:'Logo', classLine:'Teacher / Grade / Class' };
 const textStyles = {
-  school: { auto: true, color: '#17202a' },
-  name: { auto: true, color: '#17202a' },
-  classLine: { auto: true, color: '#17202a' },
+  school: { auto: true, color: '#17202a', shadow: false, shadowColor: '#000000', shadowSize: 3 },
+  name: { auto: true, color: '#17202a', shadow: false, shadowColor: '#000000', shadowSize: 3 },
+  classLine: { auto: true, color: '#17202a', shadow: false, shadowColor: '#000000', shadowSize: 3 },
 };
 
 pdfInput.addEventListener('change', importPdf);
@@ -118,6 +122,24 @@ manualTextColor.addEventListener('input', () => {
   if(!textStyles[selectedElement]) return;
   textStyles[selectedElement].color = manualTextColor.value;
   if(!textStyles[selectedElement].auto) updateMasterStage();
+});
+textShadowEnabled.addEventListener('change', () => {
+  if(!textStyles[selectedElement]) return;
+  textStyles[selectedElement].shadow = textShadowEnabled.checked;
+  textShadowColor.disabled=!textShadowEnabled.checked;
+  textShadowSize.disabled=!textShadowEnabled.checked;
+  updateMasterStage();
+});
+textShadowColor.addEventListener('input', () => {
+  if(!textStyles[selectedElement]) return;
+  textStyles[selectedElement].shadowColor = textShadowColor.value;
+  updateMasterStage();
+});
+textShadowSize.addEventListener('input', () => {
+  if(!textStyles[selectedElement]) return;
+  textStyles[selectedElement].shadowSize = Number(textShadowSize.value);
+  textShadowSizeValue.textContent = textShadowSize.value;
+  updateMasterStage();
 });
 studentSearch.addEventListener('input', renderBadges);
 clearSearchBtn.addEventListener('click', () => { studentSearch.value = ''; renderBadges(); studentSearch.focus(); });
@@ -398,6 +420,12 @@ function selectMasterElement(key){
     autoTextColor.checked=textStyles[key].auto;
     manualTextColor.value=textStyles[key].color;
     manualTextColor.disabled=textStyles[key].auto;
+    textShadowEnabled.checked=!!textStyles[key].shadow;
+    textShadowColor.value=textStyles[key].shadowColor||'#000000';
+    textShadowSize.value=textStyles[key].shadowSize||3;
+    textShadowSizeValue.textContent=textStyles[key].shadowSize||3;
+    textShadowColor.disabled=!textStyles[key].shadow;
+    textShadowSize.disabled=!textStyles[key].shadow;
   }
 }
 
@@ -426,6 +454,13 @@ function updateMasterStage(){
       el.style.fontSize=`${Math.max(9,cfg.size*2.0)}px`;
       el.style.maxWidth='92%';
       el.style.color=resolvedTextColor(key);
+      const ts=textStyles[key];
+      if(ts?.shadow){
+        const shadowPx=Math.max(1,Number(ts.shadowSize)||3);
+        el.style.textShadow=`${shadowPx}px ${shadowPx}px ${Math.max(1,shadowPx*.75)}px ${ts.shadowColor||'#000000'}`;
+      }else{
+        el.style.textShadow='none';
+      }
     }
   });
   selectMasterElement(selectedElement);
@@ -568,21 +603,32 @@ async function drawCard(page,pdf,badge,x,y,w,h,font,bold,logoImage){
       const iw=logoImage.width*ratio, ih=logoImage.height*ratio;
       page.drawImage(logoImage,{x:cx-iw/2,y:cy-ih/2,width:iw,height:ih});
     }else if(key==='school'){
-      drawCenteredAt(page,schoolNameInput.value.trim(),cx,cy,w*.9,Math.max(6,cfg.size*.85),bold,resolvedTextColor('school'));
+      drawCenteredAt(page,schoolNameInput.value.trim(),cx,cy,w*.9,Math.max(6,cfg.size*.85),bold,resolvedTextColor('school'),textStyles.school);
     }else if(key==='name'){
-      drawCenteredAt(page,badge.name,cx,cy,w*.92,Math.max(7,cfg.size*.95),bold,resolvedTextColor('name'));
+      drawCenteredAt(page,badge.name,cx,cy,w*.92,Math.max(7,cfg.size*.95),bold,resolvedTextColor('name'),textStyles.name);
     }else if(key==='classLine'){
-      drawCenteredAt(page,classNameInput.value.trim(),cx,cy,w*.92,Math.max(6,cfg.size*.9),font,resolvedTextColor('classLine'));
+      drawCenteredAt(page,classNameInput.value.trim(),cx,cy,w*.92,Math.max(6,cfg.size*.9),font,resolvedTextColor('classLine'),textStyles.classLine);
     }
   }
 }
 
-function drawCenteredAt(page,text,cx,cy,maxWidth,size,font,colorHex){
+function drawCenteredAt(page,text,cx,cy,maxWidth,size,font,colorHex,style=null){
   if(!text)return;
   const fitted=fitText(text,maxWidth,size,font);
   const tw=font.widthOfTextAtSize(fitted,size);
+  const tx=cx-tw/2, ty=cy-size*.35;
+  if(style?.shadow){
+    const sc=hexToRgb(style.shadowColor||'#000000');
+    // Convert the editor's shadow-size control into a proportional PDF offset.
+    // A few low-opacity surrounding copies create a soft edge without rasterizing text.
+    const d=Math.max(.6,(Number(style.shadowSize)||3)*size/18);
+    const shadowOpts={size,font,color:rgb(sc.r,sc.g,sc.b),opacity:.28};
+    for(const [ox,oy] of [[d,d],[d,-d],[-d,d],[-d,-d],[d*1.5,-d*1.5]]){
+      page.drawText(fitted,{x:tx+ox,y:ty+oy,...shadowOpts});
+    }
+  }
   const c=hexToRgb(colorHex||'#17202a');
-  page.drawText(fitted,{x:cx-tw/2,y:cy-size*.35,size,font,color:rgb(c.r,c.g,c.b)});
+  page.drawText(fitted,{x:tx,y:ty,size,font,color:rgb(c.r,c.g,c.b)});
 }
 
 function resolvedTextColor(key){

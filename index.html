@@ -107,6 +107,16 @@
                 <input id="manualTextColor" type="color" value="#17202a" />
               </label>
               <span class="hint">Auto chooses a readable complementary color from the card background. Turn Auto off to force this element's color.</span>
+              <div class="shadow-controls">
+                <label class="inline-check"><input id="textShadowEnabled" type="checkbox" /> Drop shadow</label>
+                <label>Shadow color
+                  <input id="textShadowColor" type="color" value="#000000" />
+                </label>
+                <label>Shadow size <span id="textShadowSizeValue" class="subtle">3</span>
+                  <input id="textShadowSize" type="range" min="1" max="12" step="1" value="3" />
+                </label>
+                <span class="hint">Shadow settings are saved separately for each text element and are included in PDF preview/export.</span>
+              </div>
             </div>
           </div>
 

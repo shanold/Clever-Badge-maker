@@ -106,3 +106,6 @@ input[type="color"] { width:100%; height:42px; padding:3px; border:1px solid #c8
 .qr-thumb, .qr-element .element-content { border-radius:8px; overflow:hidden; }
 .export-actions { display:flex; gap:10px; flex-wrap:wrap; }
 @media (max-width:600px){ .export-actions { width:100%; } .export-actions button { flex:1; } }
+
+.shadow-controls { display:grid; gap:10px; border-top:1px solid #d8e0e8; padding-top:10px; margin-top:2px; }
+.shadow-controls input[type="color"]:disabled, .shadow-controls input[type="range"]:disabled { opacity:.45; cursor:not-allowed; }
