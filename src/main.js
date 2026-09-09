@@ -13,6 +13,7 @@ const schoolNameInput = $('#schoolName');
 const badgeGrid = $('#badgeGrid');
 const badgeTemplate = $('#badgeTemplate');
 const exportBtn = $('#exportBtn');
+const previewBtn = $('#previewBtn');
 const statusEl = $('#status');
 const countEl = $('#count');
 const selectAllBtn = $('#selectAllBtn');
@@ -93,6 +94,7 @@ logoInput.addEventListener('change', async () => {
 classNameInput.addEventListener('input', updateMasterStage);
 schoolNameInput.addEventListener('input', updateMasterStage);
 exportBtn.addEventListener('click', exportPdf);
+previewBtn.addEventListener('click', previewPdf);
 selectAllBtn.addEventListener('click', () => setAllSelected(true));
 selectNoneBtn.addEventListener('click', () => setAllSelected(false));
 removeSelectedBtn.addEventListener('click', removeSelected);
@@ -170,6 +172,7 @@ async function importPdf() {
   badges = [];
   renderBadges();
   exportBtn.disabled = true;
+  previewBtn.disabled = true;
   statusEl.textContent = 'Reading PDF locally…';
 
   try {
@@ -360,6 +363,7 @@ function updateButtons(){
   const selected=badges.some(b=>b.selected);
   removeSelectedBtn.disabled=!selected;
   exportBtn.disabled=!badges.length||badges.some(b=>!b.qrDataUrl);
+  previewBtn.disabled=exportBtn.disabled;
 }
 
 function applyPreset(){
@@ -489,38 +493,58 @@ function clampLayout(key){
   layout[key].y=Math.max(3,Math.min(97,layout[key].y));
 }
 
+async function buildPdfBytes(){
+  if(!badges.length||badges.some(b=>!b.qrDataUrl)) throw new Error('All badges need a detected QR code before creating the PDF.');
+  const pdf=await PDFDocument.create();
+  const font=await pdf.embedFont(StandardFonts.Helvetica);
+  const bold=await pdf.embedFont(StandardFonts.HelveticaBold);
+  const pageW=612,pageH=792,margin=18,gap=8;
+  const cardW=Number(cardWidth.value)*72, cardH=Number(cardHeight.value)*72;
+  const cols=Math.max(1,Math.floor((pageW-margin*2+gap)/(cardW+gap)));
+  const rows=Math.max(1,Math.floor((pageH-margin*2+gap)/(cardH+gap)));
+  if(cardW>pageW-margin*2||cardH>pageH-margin*2) throw new Error('Card dimensions are too large for a US Letter page.');
+  const perPage=cols*rows;
+  let logoImage=null;
+  let backgroundImage=null;
+  if(logoDataUrl) logoImage=await embedDataUrl(pdf,logoDataUrl);
+  if(backgroundImageDataUrl) backgroundImage=await embedDataUrl(pdf,backgroundImageDataUrl);
+
+  for(let i=0;i<badges.length;i++){
+    if(i%perPage===0)pdf.addPage([pageW,pageH]);
+    const page=pdf.getPages()[pdf.getPageCount()-1];
+    const pos=i%perPage,col=pos%cols,row=Math.floor(pos/cols);
+    const x=margin+col*(cardW+gap);
+    const y=pageH-margin-cardH-row*(cardH+gap);
+    const bg=hexToRgb(backgroundColorInput.value||'#ffffff');
+    page.drawRectangle({x,y,width:cardW,height:cardH,color:rgb(bg.r,bg.g,bg.b)});
+    if(backgroundImage) page.drawImage(backgroundImage,{x,y,width:cardW,height:cardH});
+    page.drawRectangle({x,y,width:cardW,height:cardH,borderWidth:1,borderColor:rgb(.14,.2,.28)});
+    await drawCard(page,pdf,badges[i],x,y,cardW,cardH,font,bold,logoImage);
+  }
+  return await pdf.save();
+}
+
+async function previewPdf(){
+  if(previewBtn.disabled)return;
+  statusEl.textContent='Building PDF preview locally…';
+  try{
+    const bytes=await buildPdfBytes();
+    const url=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'}));
+    const previewWindow=window.open(url,'_blank','noopener,noreferrer');
+    if(!previewWindow){
+      URL.revokeObjectURL(url);
+      throw new Error('The browser blocked the preview window. Allow pop-ups for this site and try again.');
+    }
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+    statusEl.textContent=`Opened a preview of ${badges.length} badge(s).`;
+  }catch(err){ console.error(err); statusEl.textContent=`Could not preview PDF: ${err.message}`; }
+}
+
 async function exportPdf(){
-  if(!badges.length||badges.some(b=>!b.qrDataUrl))return;
+  if(exportBtn.disabled)return;
   statusEl.textContent='Building printable PDF locally…';
   try{
-    const pdf=await PDFDocument.create();
-    const font=await pdf.embedFont(StandardFonts.Helvetica);
-    const bold=await pdf.embedFont(StandardFonts.HelveticaBold);
-    const pageW=612,pageH=792,margin=18,gap=8;
-    const cardW=Number(cardWidth.value)*72, cardH=Number(cardHeight.value)*72;
-    const cols=Math.max(1,Math.floor((pageW-margin*2+gap)/(cardW+gap)));
-    const rows=Math.max(1,Math.floor((pageH-margin*2+gap)/(cardH+gap)));
-    if(cardW>pageW-margin*2||cardH>pageH-margin*2) throw new Error('Card dimensions are too large for a US Letter page.');
-    const perPage=cols*rows;
-    let logoImage=null;
-    let backgroundImage=null;
-    if(logoDataUrl) logoImage=await embedDataUrl(pdf,logoDataUrl);
-    if(backgroundImageDataUrl) backgroundImage=await embedDataUrl(pdf,backgroundImageDataUrl);
-
-    for(let i=0;i<badges.length;i++){
-      if(i%perPage===0)pdf.addPage([pageW,pageH]);
-      const page=pdf.getPages()[pdf.getPageCount()-1];
-      const pos=i%perPage,col=pos%cols,row=Math.floor(pos/cols);
-      const x=margin+col*(cardW+gap);
-      const y=pageH-margin-cardH-row*(cardH+gap);
-      const bg=hexToRgb(backgroundColorInput.value||'#ffffff');
-      page.drawRectangle({x,y,width:cardW,height:cardH,color:rgb(bg.r,bg.g,bg.b)});
-      if(backgroundImage) page.drawImage(backgroundImage,{x,y,width:cardW,height:cardH});
-      page.drawRectangle({x,y,width:cardW,height:cardH,borderWidth:1,borderColor:rgb(.14,.2,.28)});
-      await drawCard(page,pdf,badges[i],x,y,cardW,cardH,font,bold,logoImage);
-    }
-
-    const bytes=await pdf.save();
+    const bytes=await buildPdfBytes();
     downloadBlob(new Blob([bytes],{type:'application/pdf'}),'clever-badges-formatted.pdf');
     statusEl.textContent=`Exported ${badges.length} badge(s) using a ${cardWidth.value} × ${cardHeight.value} inch master card.`;
   }catch(err){ console.error(err); statusEl.textContent=`Could not export PDF: ${err.message}`; }
@@ -534,7 +558,8 @@ async function drawCard(page,pdf,badge,x,y,w,h,font,bold,logoImage){
     const cy=y+h*(1-cfg.y/100);
 
     if(key==='qr'){
-      const image=await embedDataUrl(pdf,badge.qrDataUrl);
+      const roundedQr=await roundedQrDataUrl(badge.qrDataUrl);
+      const image=await embedDataUrl(pdf,roundedQr);
       const side=Math.min(w,h)*(cfg.size/100);
       page.drawImage(image,{x:cx-side/2,y:cy-side/2,width:side,height:side});
     }else if(key==='logo'&&logoImage){
@@ -611,6 +636,33 @@ function fitText(text,maxWidth,size,font){
   while(t.length>3&&font.widthOfTextAtSize(t+'…',size)>maxWidth)t=t.slice(0,-1);
   return t+'…';
 }
+const roundedQrCache=new Map();
+async function roundedQrDataUrl(dataUrl){
+  if(roundedQrCache.has(dataUrl)) return roundedQrCache.get(dataUrl);
+  const result=await new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.onload=()=>{
+      const size=Math.max(img.naturalWidth,img.naturalHeight);
+      const c=document.createElement('canvas'); c.width=size; c.height=size;
+      const ctx=c.getContext('2d');
+      const radius=Math.max(3,size*.035);
+      ctx.clearRect(0,0,size,size);
+      ctx.beginPath();
+      ctx.moveTo(radius,0); ctx.lineTo(size-radius,0); ctx.quadraticCurveTo(size,0,size,radius);
+      ctx.lineTo(size,size-radius); ctx.quadraticCurveTo(size,size,size-radius,size);
+      ctx.lineTo(radius,size); ctx.quadraticCurveTo(0,size,0,size-radius);
+      ctx.lineTo(0,radius); ctx.quadraticCurveTo(0,0,radius,0); ctx.closePath();
+      ctx.clip();
+      ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,size,size);
+      ctx.drawImage(img,0,0,size,size);
+      resolve(c.toDataURL('image/png'));
+    };
+    img.onerror=reject; img.src=dataUrl;
+  });
+  roundedQrCache.set(dataUrl,result);
+  return result;
+}
+
 async function embedDataUrl(pdf,dataUrl){
   const bytes=Uint8Array.from(atob(dataUrl.split(',')[1]),c=>c.charCodeAt(0));
   return dataUrl.startsWith('data:image/png')?pdf.embedPng(bytes):pdf.embedJpg(bytes);

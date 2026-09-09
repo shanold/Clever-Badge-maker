@@ -47,7 +47,12 @@ Open `http://YOUR-SERVER-IP:8089`
 ## v0.5.1
 - Shifted the existing QR crop upward by 2.5% of the crop size without changing its dimensions, to remove the last visible tops of student-name letters.
 
-## v0.5.2
+## v0.5.3
 - Automatic readable complementary text colors based on the card background.
 - Background images are sampled locally for an approximate brightness/color reference.
 - School name, student name, and class line each support their own manual text-color override.
+
+
+## v0.5.3 polish
+- Subtle rounded corners on QR crops in the student list, master card, and exported PDF.
+- Preview PDF button beside Export Printable PDF. Preview uses the exact same PDF generation path as export.
