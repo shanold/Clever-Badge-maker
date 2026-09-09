@@ -27,7 +27,7 @@ Default port: `8089`
 Open `http://YOUR-SERVER-IP:8089`
 
 
-## v0.4 additions
+## v0.5 additions
 
 - Search/filter imported students by name.
 - Drag any master-card element to reposition it.
@@ -37,3 +37,8 @@ Open `http://YOUR-SERVER-IP:8089`
 - Add a local PNG/JPEG/WebP background image.
 - Background color/image and master layout are reproduced in the exported PDF.
 - Image processing remains local in the browser.
+
+
+## v0.5
+- Vertical and horizontal center snap guides in the master-card editor.
+- Tightened QR cropping so the printed Clever student name beneath the QR is not included in the QR image.

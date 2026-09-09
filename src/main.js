@@ -22,6 +22,8 @@ const cardPreset = $('#cardPreset');
 const cardWidth = $('#cardWidth');
 const cardHeight = $('#cardHeight');
 const masterStage = $('#masterStage');
+const guideVertical = $('#guideVertical');
+const guideHorizontal = $('#guideHorizontal');
 const elementSize = $('#elementSize');
 const elementVisible = $('#elementVisible');
 const selectedElementName = $('#selectedElementName');
@@ -284,7 +286,9 @@ function findNameForQr(textItems, box, cell) {
 }
 
 function cropQrByBox(canvas, box) {
-  const side=Math.min(Math.max(box.w,box.h)*1.32,canvas.width,canvas.height);
+  // box.w/box.h already include a quiet-zone margin around the detected QR.
+  // Keep this crop tight so Clever's printed student name below the QR is not captured.
+  const side=Math.min(Math.max(box.w,box.h)*1.02,canvas.width,canvas.height);
   const sx=Math.max(0,Math.min(canvas.width-side,box.cx-side/2));
   const sy=Math.max(0,Math.min(canvas.height-side,box.cy-side/2));
   const out=document.createElement('canvas');
@@ -420,13 +424,34 @@ function moveDrag(e){
     elementSize.value=Math.round(layout[dragState.key].size);
   }else{
     const r=masterStage.getBoundingClientRect();
-    layout[dragState.key].x=(e.clientX-r.left)/r.width*100;
-    layout[dragState.key].y=(e.clientY-r.top)/r.height*100;
+    let x=(e.clientX-r.left)/r.width*100;
+    let y=(e.clientY-r.top)/r.height*100;
+
+    // Center snapping. The threshold is in screen pixels so it feels consistent
+    // regardless of the selected card dimensions.
+    const snapPx=8;
+    const snapXPercent=snapPx/r.width*100;
+    const snapYPercent=snapPx/r.height*100;
+    const snapX=Math.abs(x-50)<=snapXPercent;
+    const snapY=Math.abs(y-50)<=snapYPercent;
+    if(snapX)x=50;
+    if(snapY)y=50;
+    layout[dragState.key].x=x;
+    layout[dragState.key].y=y;
+    setAlignmentGuides(snapX,snapY);
     clampLayout(dragState.key);
   }
   updateMasterStage();
 }
-function endDrag(){ dragState=null; }
+function endDrag(){
+  dragState=null;
+  setAlignmentGuides(false,false);
+}
+
+function setAlignmentGuides(vertical,horizontal){
+  if(guideVertical) guideVertical.classList.toggle('show',!!vertical);
+  if(guideHorizontal) guideHorizontal.classList.toggle('show',!!horizontal);
+}
 
 function clampLayout(key){
   layout[key].x=Math.max(3,Math.min(97,layout[key].x));
