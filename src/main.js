@@ -33,10 +33,14 @@ const clearSearchBtn = $('#clearSearchBtn');
 const backgroundColorInput = $('#backgroundColor');
 const backgroundImageInput = $('#backgroundImageInput');
 const clearBackgroundImageBtn = $('#clearBackgroundImageBtn');
+const textColorControls = $('#textColorControls');
+const autoTextColor = $('#autoTextColor');
+const manualTextColor = $('#manualTextColor');
 
 let badges = [];
 let logoDataUrl = null;
 let backgroundImageDataUrl = null;
+let backgroundImageAverage = null;
 let selectedElement = 'qr';
 let dragState = null;
 const qrReader = new BrowserQRCodeReader();
@@ -74,6 +78,11 @@ const layoutPresets = {
 const defaults = structuredClone(layoutPresets.portrait);
 let layout = structuredClone(defaults);
 const labels = { qr:'QR code', name:'Student name', school:'School name', logo:'Logo', classLine:'Teacher / Grade / Class' };
+const textStyles = {
+  school: { auto: true, color: '#17202a' },
+  name: { auto: true, color: '#17202a' },
+  classLine: { auto: true, color: '#17202a' },
+};
 
 pdfInput.addEventListener('change', importPdf);
 logoInput.addEventListener('change', async () => {
@@ -98,16 +107,28 @@ elementVisible.addEventListener('change', () => {
   layout[selectedElement].visible = elementVisible.checked;
   updateMasterStage();
 });
+autoTextColor.addEventListener('change', () => {
+  if(!textStyles[selectedElement]) return;
+  textStyles[selectedElement].auto = autoTextColor.checked;
+  updateMasterStage();
+});
+manualTextColor.addEventListener('input', () => {
+  if(!textStyles[selectedElement]) return;
+  textStyles[selectedElement].color = manualTextColor.value;
+  if(!textStyles[selectedElement].auto) updateMasterStage();
+});
 studentSearch.addEventListener('input', renderBadges);
 clearSearchBtn.addEventListener('click', () => { studentSearch.value = ''; renderBadges(); studentSearch.focus(); });
 backgroundColorInput.addEventListener('input', updateMasterStage);
 backgroundImageInput.addEventListener('change', async () => {
   const file = backgroundImageInput.files?.[0];
   backgroundImageDataUrl = file ? await fileToPngDataUrl(file) : null;
+  backgroundImageAverage = backgroundImageDataUrl ? await averageColorFromDataUrl(backgroundImageDataUrl) : null;
   updateMasterStage();
 });
 clearBackgroundImageBtn.addEventListener('click', () => {
   backgroundImageDataUrl = null;
+  backgroundImageAverage = null;
   backgroundImageInput.value = '';
   updateMasterStage();
 });
@@ -367,6 +388,13 @@ function selectMasterElement(key){
   selectedElementName.textContent=labels[key];
   elementSize.value=layout[key].size;
   elementVisible.checked=layout[key].visible;
+  const isText=!!textStyles[key];
+  textColorControls.style.display=isText?'grid':'none';
+  if(isText){
+    autoTextColor.checked=textStyles[key].auto;
+    manualTextColor.value=textStyles[key].color;
+    manualTextColor.disabled=textStyles[key].auto;
+  }
 }
 
 function updateMasterStage(){
@@ -393,6 +421,7 @@ function updateMasterStage(){
     } else {
       el.style.fontSize=`${Math.max(9,cfg.size*2.0)}px`;
       el.style.maxWidth='92%';
+      el.style.color=resolvedTextColor(key);
     }
   });
   selectMasterElement(selectedElement);
@@ -514,20 +543,67 @@ async function drawCard(page,pdf,badge,x,y,w,h,font,bold,logoImage){
       const iw=logoImage.width*ratio, ih=logoImage.height*ratio;
       page.drawImage(logoImage,{x:cx-iw/2,y:cy-ih/2,width:iw,height:ih});
     }else if(key==='school'){
-      drawCenteredAt(page,schoolNameInput.value.trim(),cx,cy,w*.9,Math.max(6,cfg.size*.85),bold);
+      drawCenteredAt(page,schoolNameInput.value.trim(),cx,cy,w*.9,Math.max(6,cfg.size*.85),bold,resolvedTextColor('school'));
     }else if(key==='name'){
-      drawCenteredAt(page,badge.name,cx,cy,w*.92,Math.max(7,cfg.size*.95),bold);
+      drawCenteredAt(page,badge.name,cx,cy,w*.92,Math.max(7,cfg.size*.95),bold,resolvedTextColor('name'));
     }else if(key==='classLine'){
-      drawCenteredAt(page,classNameInput.value.trim(),cx,cy,w*.92,Math.max(6,cfg.size*.9),font);
+      drawCenteredAt(page,classNameInput.value.trim(),cx,cy,w*.92,Math.max(6,cfg.size*.9),font,resolvedTextColor('classLine'));
     }
   }
 }
 
-function drawCenteredAt(page,text,cx,cy,maxWidth,size,font){
+function drawCenteredAt(page,text,cx,cy,maxWidth,size,font,colorHex){
   if(!text)return;
   const fitted=fitText(text,maxWidth,size,font);
   const tw=font.widthOfTextAtSize(fitted,size);
-  page.drawText(fitted,{x:cx-tw/2,y:cy-size*.35,size,font,color:rgb(.08,.12,.17)});
+  const c=hexToRgb(colorHex||'#17202a');
+  page.drawText(fitted,{x:cx-tw/2,y:cy-size*.35,size,font,color:rgb(c.r,c.g,c.b)});
+}
+
+function resolvedTextColor(key){
+  const style=textStyles[key];
+  if(!style) return '#17202a';
+  if(!style.auto) return style.color;
+  const bg=backgroundImageAverage || backgroundColorInput.value || '#ffffff';
+  return adaptiveComplement(bg);
+}
+
+function adaptiveComplement(hex){
+  const {r,g,b}=hexToRgb255(hex);
+  const comp={r:255-r,g:255-g,b:255-b};
+  const bg={r,g,b};
+  if(contrastRatio(bg,comp)>=4.5) return rgb255ToHex(comp);
+  const black={r:23,g:32,b:42}, white={r:255,g:255,b:255};
+  return contrastRatio(bg,white)>=contrastRatio(bg,black) ? '#ffffff' : '#17202a';
+}
+function hexToRgb255(hex){
+  const clean=(hex||'#ffffff').replace('#','');
+  const full=clean.length===3?clean.split('').map(c=>c+c).join(''):clean;
+  return {r:parseInt(full.slice(0,2),16),g:parseInt(full.slice(2,4),16),b:parseInt(full.slice(4,6),16)};
+}
+function rgb255ToHex(c){ return '#'+[c.r,c.g,c.b].map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join(''); }
+function relativeLuminance(c){
+  const f=v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)};
+  return .2126*f(c.r)+.7152*f(c.g)+.0722*f(c.b);
+}
+function contrastRatio(a,b){
+  const l1=relativeLuminance(a),l2=relativeLuminance(b);
+  return (Math.max(l1,l2)+.05)/(Math.min(l1,l2)+.05);
+}
+async function averageColorFromDataUrl(dataUrl){
+  return new Promise((resolve)=>{
+    const img=new Image();
+    img.onload=()=>{
+      const c=document.createElement('canvas'); c.width=32; c.height=32;
+      const ctx=c.getContext('2d'); ctx.drawImage(img,0,0,32,32);
+      const data=ctx.getImageData(0,0,32,32).data;
+      let r=0,g=0,b=0,n=0;
+      for(let i=0;i<data.length;i+=16){ const a=data[i+3]/255; if(a<.15)continue; r+=data[i];g+=data[i+1];b+=data[i+2];n++; }
+      resolve(n?rgb255ToHex({r:r/n,g:g/n,b:b/n}):backgroundColorInput.value||'#ffffff');
+    };
+    img.onerror=()=>resolve(backgroundColorInput.value||'#ffffff');
+    img.src=dataUrl;
+  });
 }
 function fitText(text,maxWidth,size,font){
   if(font.widthOfTextAtSize(text,size)<=maxWidth)return text;

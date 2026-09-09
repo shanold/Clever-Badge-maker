@@ -101,6 +101,13 @@
             </label>
             <span class="hint">You can also resize directly from the corner handle on the card.</span>
             <label class="inline-check"><input id="elementVisible" type="checkbox" checked /> Show this element</label>
+            <div id="textColorControls" class="text-color-controls">
+              <label class="inline-check"><input id="autoTextColor" type="checkbox" checked /> Auto text color</label>
+              <label>Manual text color
+                <input id="manualTextColor" type="color" value="#17202a" />
+              </label>
+              <span class="hint">Auto chooses a readable complementary color from the card background. Turn Auto off to force this element's color.</span>
+            </div>
           </div>
 
           <button id="resetLayoutBtn" type="button" class="secondary full">Reset layout</button>
