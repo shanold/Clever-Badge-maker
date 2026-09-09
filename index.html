@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clever Badge Maker</title>
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Clever Badge Maker</h1>
+      <p>Reformat Clever QR badges locally in your browser.</p>
+    </div>
+    <div class="privacy">Local processing • files never leave this device</div>
+  </header>
+
+  <main>
+    <section class="panel controls">
+      <h2>1. Import Clever PDF</h2>
+      <input id="pdfInput" type="file" accept="application/pdf" />
+      <p class="hint">This first version expects one Clever badge per PDF page, with the QR code above the student's name.</p>
+      <div id="status" class="status">No PDF loaded.</div>
+    </section>
+
+    <section class="panel controls">
+      <h2>2. Badge Style</h2>
+      <div class="grid">
+        <label>Teacher / Class
+          <input id="className" type="text" placeholder="Mrs. Brown • Room 104" />
+        </label>
+        <label>School name
+          <input id="schoolName" type="text" placeholder="Example Elementary" />
+        </label>
+        <label>School logo
+          <input id="logoInput" type="file" accept="image/png,image/jpeg,image/webp" />
+        </label>
+        <label>Cards per row
+          <select id="cardsPerRow">
+            <option value="2">2</option>
+            <option value="3" selected>3</option>
+          </select>
+        </label>
+      </div>
+      <button id="exportBtn" disabled>Export Printable PDF</button>
+    </section>
+
+    <section class="panel">
+      <div class="section-head">
+        <h2>3. Preview & Correct Names</h2>
+        <span id="count"></span>
+      </div>
+      <div id="badgeGrid" class="badge-grid empty">Import a PDF to begin.</div>
+    </section>
+  </main>
+
+  <template id="badgeTemplate">
+    <article class="badge-card">
+      <div class="badge-logo-wrap"><img class="badge-logo" alt="School logo" /></div>
+      <div class="school"></div>
+      <img class="qr" alt="Clever QR code" />
+      <input class="student-name" aria-label="Student name" />
+      <div class="class-line"></div>
+    </article>
+  </template>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

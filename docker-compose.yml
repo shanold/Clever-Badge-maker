@@ -1,0 +1,7 @@
+services:
+  clever-badge-maker:
+    build: .
+    container_name: clever-badge-maker
+    restart: unless-stopped
+    ports:
+      - "8088:80"
