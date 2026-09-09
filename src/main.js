@@ -290,7 +290,9 @@ function cropQrByBox(canvas, box) {
   // Keep this crop tight so Clever's printed student name below the QR is not captured.
   const side=Math.min(Math.max(box.w,box.h)*1.02,canvas.width,canvas.height);
   const sx=Math.max(0,Math.min(canvas.width-side,box.cx-side/2));
-  const sy=Math.max(0,Math.min(canvas.height-side,box.cy-side/2));
+  // Keep the crop the same size, but bias it upward slightly so the printed name below the QR stays out of frame.
+  const upwardShift=side*0.025;
+  const sy=Math.max(0,Math.min(canvas.height-side,box.cy-side/2-upwardShift));
   const out=document.createElement('canvas');
   out.width=Math.ceil(side); out.height=Math.ceil(side);
   const octx=out.getContext('2d');

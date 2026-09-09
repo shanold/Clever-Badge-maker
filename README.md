@@ -42,3 +42,7 @@ Open `http://YOUR-SERVER-IP:8089`
 ## v0.5
 - Vertical and horizontal center snap guides in the master-card editor.
 - Tightened QR cropping so the printed Clever student name beneath the QR is not included in the QR image.
+
+
+## v0.5.1
+- Shifted the existing QR crop upward by 2.5% of the crop size without changing its dimensions, to remove the last visible tops of student-name letters.
