@@ -26,28 +26,57 @@ const elementSize = $('#elementSize');
 const elementVisible = $('#elementVisible');
 const selectedElementName = $('#selectedElementName');
 const resetLayoutBtn = $('#resetLayoutBtn');
+const studentSearch = $('#studentSearch');
+const clearSearchBtn = $('#clearSearchBtn');
+const backgroundColorInput = $('#backgroundColor');
+const backgroundImageInput = $('#backgroundImageInput');
+const clearBackgroundImageBtn = $('#clearBackgroundImageBtn');
 
 let badges = [];
 let logoDataUrl = null;
+let backgroundImageDataUrl = null;
 let selectedElement = 'qr';
 let dragState = null;
 const qrReader = new BrowserQRCodeReader();
 
-const defaults = {
-  qr:        { x: 50, y: 44, size: 46, visible: true },
-  name:      { x: 50, y: 73, size: 9,  visible: true },
-  school:    { x: 50, y: 11, size: 6,  visible: true },
-  logo:      { x: 50, y: 21, size: 18, visible: true },
-  classLine: { x: 50, y: 84, size: 5,  visible: true },
+const layoutPresets = {
+  portrait: {
+    qr:        { x: 50, y: 47, size: 48, visible: true },
+    name:      { x: 50, y: 76, size: 10, visible: true },
+    school:    { x: 50, y: 9,  size: 6,  visible: true },
+    logo:      { x: 50, y: 20, size: 20, visible: true },
+    classLine: { x: 50, y: 88, size: 5,  visible: true },
+  },
+  landscape: {
+    qr:        { x: 27, y: 53, size: 55, visible: true },
+    name:      { x: 68, y: 46, size: 11, visible: true },
+    school:    { x: 68, y: 14, size: 6,  visible: true },
+    logo:      { x: 68, y: 28, size: 19, visible: true },
+    classLine: { x: 68, y: 72, size: 6,  visible: true },
+  },
+  wide: {
+    qr:        { x: 19, y: 52, size: 54, visible: true },
+    name:      { x: 61, y: 45, size: 12, visible: true },
+    school:    { x: 61, y: 12, size: 6,  visible: true },
+    logo:      { x: 85, y: 18, size: 16, visible: true },
+    classLine: { x: 61, y: 72, size: 6,  visible: true },
+  },
+  square: {
+    qr:        { x: 50, y: 47, size: 50, visible: true },
+    name:      { x: 50, y: 77, size: 10, visible: true },
+    school:    { x: 50, y: 10, size: 6,  visible: true },
+    logo:      { x: 50, y: 22, size: 17, visible: true },
+    classLine: { x: 50, y: 89, size: 5,  visible: true },
+  },
 };
+const defaults = structuredClone(layoutPresets.portrait);
 let layout = structuredClone(defaults);
-
 const labels = { qr:'QR code', name:'Student name', school:'School name', logo:'Logo', classLine:'Teacher / Grade / Class' };
 
 pdfInput.addEventListener('change', importPdf);
 logoInput.addEventListener('change', async () => {
   const file = logoInput.files?.[0];
-  logoDataUrl = file ? await fileToDataUrl(file) : null;
+  logoDataUrl = file ? await fileToPngDataUrl(file) : null;
   updateMasterStage();
 });
 classNameInput.addEventListener('input', updateMasterStage);
@@ -67,15 +96,30 @@ elementVisible.addEventListener('change', () => {
   layout[selectedElement].visible = elementVisible.checked;
   updateMasterStage();
 });
+studentSearch.addEventListener('input', renderBadges);
+clearSearchBtn.addEventListener('click', () => { studentSearch.value = ''; renderBadges(); studentSearch.focus(); });
+backgroundColorInput.addEventListener('input', updateMasterStage);
+backgroundImageInput.addEventListener('change', async () => {
+  const file = backgroundImageInput.files?.[0];
+  backgroundImageDataUrl = file ? await fileToPngDataUrl(file) : null;
+  updateMasterStage();
+});
+clearBackgroundImageBtn.addEventListener('click', () => {
+  backgroundImageDataUrl = null;
+  backgroundImageInput.value = '';
+  updateMasterStage();
+});
+
 resetLayoutBtn.addEventListener('click', () => {
-  layout = structuredClone(defaults);
+  const key = cardPreset.value in layoutPresets ? cardPreset.value : 'portrait';
+  layout = structuredClone(layoutPresets[key]);
   selectedElement = 'qr';
   selectMasterElement('qr');
   updateMasterStage();
 });
 
 masterStage.querySelectorAll('.master-element').forEach(el => {
-  el.addEventListener('pointerdown', beginDrag);
+  el.addEventListener('pointerdown', beginInteraction);
   el.addEventListener('click', () => selectMasterElement(el.dataset.element));
   el.addEventListener('keydown', (e) => {
     if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) return;
@@ -256,9 +300,15 @@ function renderBadges() {
   if(!badges.length){ badgeGrid.className='badge-grid empty'; badgeGrid.textContent='Import a PDF to begin.'; countEl.textContent=''; updateButtons(); return; }
   badgeGrid.className='badge-grid';
   const selectedCount=badges.filter(b=>b.selected).length;
-  countEl.textContent=`${badges.length} badge${badges.length===1?'':'s'} • ${selectedCount} selected`;
+  const query=studentSearch.value.trim().toLocaleLowerCase();
+  const visibleIndexes=badges.map((b,i)=>({b,i})).filter(({b})=>!query||b.name.toLocaleLowerCase().includes(query));
+  countEl.textContent=query
+    ? `${visibleIndexes.length} shown of ${badges.length} • ${selectedCount} selected`
+    : `${badges.length} badge${badges.length===1?'':'s'} • ${selectedCount} selected`;
 
-  badges.forEach((badge,index)=>{
+  if(!visibleIndexes.length){ badgeGrid.className='badge-grid empty'; badgeGrid.textContent='No students match that search.'; updateButtons(); return; }
+
+  visibleIndexes.forEach(({b:badge,i:index})=>{
     const node=badgeTemplate.content.cloneNode(true);
     const row=node.querySelector('.student-row');
     const checkbox=node.querySelector('.badge-select');
@@ -289,8 +339,11 @@ function applyPreset(){
   const presets={ portrait:[2.5,3.5], landscape:[3.5,2.5], wide:[4,2.25], square:[3,3] };
   if(presets[cardPreset.value]){
     [cardWidth.value,cardHeight.value]=presets[cardPreset.value];
+    layout=structuredClone(layoutPresets[cardPreset.value]);
+    selectedElement='qr';
   }
   resizeStage();
+  selectMasterElement(selectedElement);
 }
 function onCustomSize(){ cardPreset.value='custom'; resizeStage(); }
 function resizeStage(){
@@ -311,14 +364,18 @@ function selectMasterElement(key){
 }
 
 function updateMasterStage(){
-  const school=masterStage.querySelector('[data-element="school"]');
-  const classLine=masterStage.querySelector('[data-element="classLine"]');
+  const school=masterStage.querySelector('[data-element="school"] .element-content');
+  const classLine=masterStage.querySelector('[data-element="classLine"] .element-content');
   const logo=masterStage.querySelector('[data-element="logo"]');
   school.textContent=schoolNameInput.value.trim()||'School Name';
   classLine.textContent=classNameInput.value.trim()||'Teacher • Grade • Class';
-  const img=logo.querySelector('img'), span=logo.querySelector('span');
+  const img=logo.querySelector('img'), span=logo.querySelector('.placeholder');
   if(logoDataUrl){ img.src=logoDataUrl; img.style.display='block'; span.style.display='none'; }
   else { img.style.display='none'; span.style.display='block'; }
+
+  masterStage.style.backgroundColor=backgroundColorInput.value||'#ffffff';
+  masterStage.style.backgroundImage=backgroundImageDataUrl ? `url(${backgroundImageDataUrl})` : 'none';
+  masterStage.classList.toggle('has-background-image',!!backgroundImageDataUrl);
 
   masterStage.querySelectorAll('.master-element').forEach(el=>{
     const key=el.dataset.element, cfg=layout[key];
@@ -335,22 +392,42 @@ function updateMasterStage(){
   selectMasterElement(selectedElement);
 }
 
-function beginDrag(e){
+function beginInteraction(e){
   e.preventDefault();
   const el=e.currentTarget;
-  selectMasterElement(el.dataset.element);
-  dragState={ key:el.dataset.element, pointerId:e.pointerId };
+  const key=el.dataset.element;
+  selectMasterElement(key);
+  const stageRect=masterStage.getBoundingClientRect();
+  const mode=e.target.closest('.resize-handle')?'resize':'move';
+  const centerX=stageRect.left+stageRect.width*(layout[key].x/100);
+  const centerY=stageRect.top+stageRect.height*(layout[key].y/100);
+  dragState={
+    key,
+    mode,
+    pointerId:e.pointerId,
+    centerX,
+    centerY,
+    startSize:layout[key].size,
+    startDistance:Math.max(12,Math.hypot(e.clientX-centerX,e.clientY-centerY))
+  };
   el.setPointerCapture?.(e.pointerId);
 }
 function moveDrag(e){
   if(!dragState)return;
-  const r=masterStage.getBoundingClientRect();
-  layout[dragState.key].x=(e.clientX-r.left)/r.width*100;
-  layout[dragState.key].y=(e.clientY-r.top)/r.height*100;
-  clampLayout(dragState.key);
+  if(dragState.mode==='resize'){
+    const distance=Math.max(4,Math.hypot(e.clientX-dragState.centerX,e.clientY-dragState.centerY));
+    layout[dragState.key].size=Math.max(4,Math.min(90,dragState.startSize*(distance/dragState.startDistance)));
+    elementSize.value=Math.round(layout[dragState.key].size);
+  }else{
+    const r=masterStage.getBoundingClientRect();
+    layout[dragState.key].x=(e.clientX-r.left)/r.width*100;
+    layout[dragState.key].y=(e.clientY-r.top)/r.height*100;
+    clampLayout(dragState.key);
+  }
   updateMasterStage();
 }
 function endDrag(){ dragState=null; }
+
 function clampLayout(key){
   layout[key].x=Math.max(3,Math.min(97,layout[key].x));
   layout[key].y=Math.max(3,Math.min(97,layout[key].y));
@@ -370,7 +447,9 @@ async function exportPdf(){
     if(cardW>pageW-margin*2||cardH>pageH-margin*2) throw new Error('Card dimensions are too large for a US Letter page.');
     const perPage=cols*rows;
     let logoImage=null;
+    let backgroundImage=null;
     if(logoDataUrl) logoImage=await embedDataUrl(pdf,logoDataUrl);
+    if(backgroundImageDataUrl) backgroundImage=await embedDataUrl(pdf,backgroundImageDataUrl);
 
     for(let i=0;i<badges.length;i++){
       if(i%perPage===0)pdf.addPage([pageW,pageH]);
@@ -378,6 +457,9 @@ async function exportPdf(){
       const pos=i%perPage,col=pos%cols,row=Math.floor(pos/cols);
       const x=margin+col*(cardW+gap);
       const y=pageH-margin-cardH-row*(cardH+gap);
+      const bg=hexToRgb(backgroundColorInput.value||'#ffffff');
+      page.drawRectangle({x,y,width:cardW,height:cardH,color:rgb(bg.r,bg.g,bg.b)});
+      if(backgroundImage) page.drawImage(backgroundImage,{x,y,width:cardW,height:cardH});
       page.drawRectangle({x,y,width:cardW,height:cardH,borderWidth:1,borderColor:rgb(.14,.2,.28)});
       await drawCard(page,pdf,badges[i],x,y,cardW,cardH,font,bold,logoImage);
     }
@@ -431,4 +513,21 @@ async function embedDataUrl(pdf,dataUrl){
   return dataUrl.startsWith('data:image/png')?pdf.embedPng(bytes):pdf.embedJpg(bytes);
 }
 function fileToDataUrl(file){ return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file);}); }
+async function fileToPngDataUrl(file){
+  const src=await fileToDataUrl(file);
+  if(file.type==='image/png') return src;
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.onload=()=>{
+      const c=document.createElement('canvas'); c.width=img.naturalWidth; c.height=img.naturalHeight;
+      c.getContext('2d').drawImage(img,0,0); resolve(c.toDataURL('image/png'));
+    };
+    img.onerror=reject; img.src=src;
+  });
+}
+function hexToRgb(hex){
+  const clean=hex.replace('#','');
+  const n=parseInt(clean.length===3?clean.split('').map(c=>c+c).join(''):clean,16);
+  return {r:((n>>16)&255)/255,g:((n>>8)&255)/255,b:(n&255)/255};
+}
 function downloadBlob(blob,filename){ const a=document.createElement('a');const url=URL.createObjectURL(blob);a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000); }

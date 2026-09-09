@@ -25,3 +25,15 @@ docker compose up -d --build
 Default port: `8089`
 
 Open `http://YOUR-SERVER-IP:8089`
+
+
+## v0.4 additions
+
+- Search/filter imported students by name.
+- Drag any master-card element to reposition it.
+- Resize every master-card element with its lower-right corner handle.
+- Portrait, landscape, wide, and square shapes now load shape-specific default layouts.
+- Choose a solid card background color.
+- Add a local PNG/JPEG/WebP background image.
+- Background color/image and master layout are reproduced in the exported PDF.
+- Image processing remains local in the browser.

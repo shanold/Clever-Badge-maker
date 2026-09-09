@@ -35,6 +35,12 @@
           <button id="removeSelectedBtn" type="button" class="danger" disabled>Remove selected</button>
         </div>
       </div>
+      <div class="student-search-row">
+        <label class="search-label">Search students
+          <input id="studentSearch" type="search" placeholder="Type a student name…" autocomplete="off" />
+        </label>
+        <button id="clearSearchBtn" type="button" class="secondary">Clear</button>
+      </div>
       <div id="badgeGrid" class="badge-grid empty">Import a PDF to begin.</div>
     </section>
 
@@ -76,12 +82,24 @@
             <input id="logoInput" type="file" accept="image/png,image/jpeg,image/webp" />
           </label>
 
+          <div class="background-editor">
+            <strong>Card background</strong>
+            <label>Background color
+              <input id="backgroundColor" type="color" value="#ffffff" />
+            </label>
+            <label>Background image
+              <input id="backgroundImageInput" type="file" accept="image/png,image/jpeg,image/webp" />
+            </label>
+            <button id="clearBackgroundImageBtn" type="button" class="secondary full">Remove background image</button>
+          </div>
+
           <div class="element-editor">
             <strong>Selected element</strong>
             <div id="selectedElementName" class="selected-name">QR code</div>
             <label>Size
-              <input id="elementSize" type="range" min="5" max="80" value="45" />
+              <input id="elementSize" type="range" min="4" max="90" value="45" />
             </label>
+            <span class="hint">You can also resize directly from the corner handle on the card.</span>
             <label class="inline-check"><input id="elementVisible" type="checkbox" checked /> Show this element</label>
           </div>
 
@@ -90,13 +108,13 @@
 
         <div class="master-stage-wrap">
           <div id="masterStage" class="master-stage" aria-label="Master badge layout">
-            <div class="master-element text-element" data-element="school" tabindex="0">School Name</div>
-            <div class="master-element image-element logo-element" data-element="logo" tabindex="0"><span>Logo</span><img alt="School logo" /></div>
-            <div class="master-element image-element qr-element" data-element="qr" tabindex="0"><div class="fake-qr">QR</div></div>
-            <div class="master-element text-element name-element" data-element="name" tabindex="0">Student Name</div>
-            <div class="master-element text-element" data-element="classLine" tabindex="0">Teacher • Grade • Class</div>
+            <div class="master-element text-element" data-element="school" tabindex="0"><span class="element-content">School Name</span><span class="resize-handle" aria-hidden="true"></span></div>
+            <div class="master-element image-element logo-element" data-element="logo" tabindex="0"><span class="element-content placeholder">Logo</span><img class="element-content logo-image" alt="School logo" /><span class="resize-handle" aria-hidden="true"></span></div>
+            <div class="master-element image-element qr-element" data-element="qr" tabindex="0"><div class="element-content fake-qr">QR</div><span class="resize-handle" aria-hidden="true"></span></div>
+            <div class="master-element text-element name-element" data-element="name" tabindex="0"><span class="element-content">Student Name</span><span class="resize-handle" aria-hidden="true"></span></div>
+            <div class="master-element text-element" data-element="classLine" tabindex="0"><span class="element-content">Teacher • Grade • Class</span><span class="resize-handle" aria-hidden="true"></span></div>
           </div>
-          <p class="hint center">Click an element to select it, then drag it. The size slider changes the selected item.</p>
+          <p class="hint center">Drag an element to move it. Drag its lower-right corner handle to resize it. Every badge follows the master.</p>
         </div>
       </div>
     </section>
