@@ -10,7 +10,7 @@
   <header>
     <div>
       <h1>Clever Badge Maker</h1>
-      <p>Reformat Clever QR badges locally in your browser.</p>
+      <p>Import, trim, redesign, and print Clever QR badges locally.</p>
     </div>
     <div class="privacy">Local processing • files never leave this device</div>
   </header>
@@ -19,48 +19,107 @@
     <section class="panel controls">
       <h2>1. Import Clever PDF</h2>
       <input id="pdfInput" type="file" accept="application/pdf" />
-      <p class="hint">This first version expects one Clever badge per PDF page, with the QR code above the student's name.</p>
+      <p class="hint">Supports Clever sheets containing multiple badges per page. QR images are reused from the source PDF rather than regenerated.</p>
       <div id="status" class="status">No PDF loaded.</div>
     </section>
 
-    <section class="panel controls">
-      <h2>2. Badge Style</h2>
-      <div class="grid">
-        <label>Teacher / Class
-          <input id="className" type="text" placeholder="Mrs. Brown • Room 104" />
-        </label>
-        <label>School name
-          <input id="schoolName" type="text" placeholder="Example Elementary" />
-        </label>
-        <label>School logo
-          <input id="logoInput" type="file" accept="image/png,image/jpeg,image/webp" />
-        </label>
-        <label>Cards per row
-          <select id="cardsPerRow">
-            <option value="2">2</option>
-            <option value="3" selected>3</option>
-          </select>
-        </label>
-      </div>
-      <button id="exportBtn" disabled>Export Printable PDF</button>
-    </section>
-
     <section class="panel">
-      <div class="section-head">
-        <h2>3. Preview & Correct Names</h2>
-        <span id="count"></span>
+      <div class="section-head wrap">
+        <div>
+          <h2>2. Choose Students</h2>
+          <span id="count" class="subtle"></span>
+        </div>
+        <div class="toolbar compact">
+          <button id="selectAllBtn" type="button" class="secondary">Select all</button>
+          <button id="selectNoneBtn" type="button" class="secondary">Select none</button>
+          <button id="removeSelectedBtn" type="button" class="danger" disabled>Remove selected</button>
+        </div>
       </div>
       <div id="badgeGrid" class="badge-grid empty">Import a PDF to begin.</div>
+    </section>
+
+    <section class="panel designer-panel">
+      <div class="section-head wrap">
+        <div>
+          <h2>3. Design the Master Card</h2>
+          <p class="hint no-margin">Drag elements on this card. Every student badge follows the same layout.</p>
+        </div>
+      </div>
+
+      <div class="designer-layout">
+        <div class="designer-controls">
+          <label>Card shape
+            <select id="cardPreset">
+              <option value="portrait" selected>Portrait — 2.5 × 3.5 in</option>
+              <option value="landscape">Landscape — 3.5 × 2.5 in</option>
+              <option value="wide">Wide — 4 × 2.25 in</option>
+              <option value="square">Square — 3 × 3 in</option>
+              <option value="custom">Custom</option>
+            </select>
+          </label>
+          <div class="two-col">
+            <label>Width (in)
+              <input id="cardWidth" type="number" min="1.5" max="8" step="0.05" value="2.5" />
+            </label>
+            <label>Height (in)
+              <input id="cardHeight" type="number" min="1.5" max="8" step="0.05" value="3.5" />
+            </label>
+          </div>
+
+          <label>School name
+            <input id="schoolName" type="text" placeholder="Example Elementary" />
+          </label>
+          <label>Teacher / Grade / Class line
+            <input id="className" type="text" placeholder="Mrs. Brown • Grade 3" />
+          </label>
+          <label>School logo
+            <input id="logoInput" type="file" accept="image/png,image/jpeg,image/webp" />
+          </label>
+
+          <div class="element-editor">
+            <strong>Selected element</strong>
+            <div id="selectedElementName" class="selected-name">QR code</div>
+            <label>Size
+              <input id="elementSize" type="range" min="5" max="80" value="45" />
+            </label>
+            <label class="inline-check"><input id="elementVisible" type="checkbox" checked /> Show this element</label>
+          </div>
+
+          <button id="resetLayoutBtn" type="button" class="secondary full">Reset layout</button>
+        </div>
+
+        <div class="master-stage-wrap">
+          <div id="masterStage" class="master-stage" aria-label="Master badge layout">
+            <div class="master-element text-element" data-element="school" tabindex="0">School Name</div>
+            <div class="master-element image-element logo-element" data-element="logo" tabindex="0"><span>Logo</span><img alt="School logo" /></div>
+            <div class="master-element image-element qr-element" data-element="qr" tabindex="0"><div class="fake-qr">QR</div></div>
+            <div class="master-element text-element name-element" data-element="name" tabindex="0">Student Name</div>
+            <div class="master-element text-element" data-element="classLine" tabindex="0">Teacher • Grade • Class</div>
+          </div>
+          <p class="hint center">Click an element to select it, then drag it. The size slider changes the selected item.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel controls">
+      <div class="section-head wrap">
+        <div>
+          <h2>4. Export</h2>
+          <p class="hint no-margin">Cards are automatically packed onto US Letter pages using the master card dimensions.</p>
+        </div>
+        <button id="exportBtn" disabled>Export Printable PDF</button>
+      </div>
     </section>
   </main>
 
   <template id="badgeTemplate">
-    <article class="badge-card">
-      <div class="badge-logo-wrap"><img class="badge-logo" alt="School logo" /></div>
-      <div class="school"></div>
-      <img class="qr" alt="Clever QR code" />
-      <input class="student-name" aria-label="Student name" />
-      <div class="class-line"></div>
+    <article class="student-row">
+      <label class="select-box"><input class="badge-select" type="checkbox" /> <span>Select</span></label>
+      <div class="thumb"><img class="qr-thumb" alt="Clever QR code" /></div>
+      <div class="student-meta">
+        <input class="student-name" aria-label="Student name" />
+        <div class="source-info"></div>
+      </div>
     </article>
   </template>
 
