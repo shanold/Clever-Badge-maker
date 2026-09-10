@@ -144,3 +144,7 @@ input[type="color"] { width:100%; height:42px; padding:3px; border:1px solid #c8
   .shadow-controls.compact-control-grid { grid-template-columns:1fr; }
   .full-row { grid-column:1; }
 }
+
+.offset-pair { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:7px 8px; }
+.offset-pair .compact-slider { min-width:0; }
+@media (max-width:560px){ .offset-pair { grid-template-columns:minmax(0,1fr) minmax(0,1fr); } }
