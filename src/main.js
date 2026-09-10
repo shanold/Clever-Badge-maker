@@ -30,6 +30,9 @@ const elementVisible = $('#elementVisible');
 const selectedElementName = $('#selectedElementName');
 const elementPopover = $('#elementPopover');
 const resetLayoutBtn = $('#resetLayoutBtn');
+const importLayoutBtn = $('#importLayoutBtn');
+const exportLayoutBtn = $('#exportLayoutBtn');
+const layoutFileInput = $('#layoutFileInput');
 const studentSearch = $('#studentSearch');
 const clearSearchBtn = $('#clearSearchBtn');
 const backgroundColorInput = $('#backgroundColor');
@@ -168,6 +171,10 @@ clearBackgroundImageBtn.addEventListener('click', () => {
   updateMasterStage();
 });
 
+exportLayoutBtn.addEventListener('click', exportLayoutFile);
+importLayoutBtn.addEventListener('click', () => layoutFileInput.click());
+layoutFileInput.addEventListener('change', importLayoutFile);
+
 resetLayoutBtn.addEventListener('click', () => {
   const key = cardPreset.value in layoutPresets ? cardPreset.value : 'portrait';
   layout = structuredClone(layoutPresets[key]);
@@ -199,6 +206,91 @@ applyPreset();
 selectMasterElement('qr');
 updateMasterStage();
 hideElementPopover();
+
+
+function exportLayoutFile(){
+  const data={
+    type:'clever-badge-layout',
+    version:1,
+    card:{
+      preset:cardPreset.value,
+      width:Number(cardWidth.value),
+      height:Number(cardHeight.value),
+    },
+    layout:structuredClone(layout),
+    textStyles:structuredClone(textStyles),
+    fields:{
+      schoolName:schoolNameInput.value,
+      className:classNameInput.value,
+    },
+    appearance:{
+      backgroundColor:backgroundColorInput.value||'#ffffff',
+      backgroundImageDataUrl:backgroundImageDataUrl||null,
+      logoDataUrl:logoDataUrl||null,
+    }
+  };
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const school=(schoolNameInput.value.trim()||'clever-badge').replace(/[^a-z0-9_-]+/gi,'-').replace(/^-+|-+$/g,'').toLowerCase();
+  downloadBlob(blob,`${school || 'clever-badge'}-layout.json`);
+  statusEl.textContent='Layout exported. No student names or QR codes were included.';
+}
+
+async function importLayoutFile(){
+  const file=layoutFileInput.files?.[0];
+  if(!file)return;
+  try{
+    const data=JSON.parse(await file.text());
+    if(data?.type!=='clever-badge-layout' || data?.version!==1) throw new Error('This is not a supported Clever Badge Maker layout file.');
+    if(!data.layout || !data.card) throw new Error('The layout file is missing required design information.');
+
+    const required=['qr','name','school','logo','classLine'];
+    for(const key of required){
+      const item=data.layout[key];
+      if(!item || !Number.isFinite(Number(item.x)) || !Number.isFinite(Number(item.y)) || !Number.isFinite(Number(item.size)))
+        throw new Error(`The layout data for ${key} is invalid.`);
+    }
+
+    layout=structuredClone(data.layout);
+    for(const key of required){
+      layout[key].x=Math.max(3,Math.min(97,Number(layout[key].x)));
+      layout[key].y=Math.max(3,Math.min(97,Number(layout[key].y)));
+      layout[key].size=Math.max(4,Math.min(63,Number(layout[key].size)));
+      layout[key].visible=layout[key].visible!==false;
+    }
+
+    const importedStyles=data.textStyles||{};
+    for(const key of ['school','name','classLine']){
+      if(!importedStyles[key]) continue;
+      Object.assign(textStyles[key], importedStyles[key]);
+      textStyles[key].shadowX=0;
+      textStyles[key].shadowY=0;
+    }
+
+    cardWidth.value=Number(data.card.width)||2.3;
+    cardHeight.value=Number(data.card.height)||3.3;
+    const validPresets=['portrait','landscape','wide','square','custom'];
+    cardPreset.value=validPresets.includes(data.card.preset)?data.card.preset:'custom';
+    schoolNameInput.value=data.fields?.schoolName||'';
+    classNameInput.value=data.fields?.className||'';
+    backgroundColorInput.value=/^#[0-9a-f]{6}$/i.test(data.appearance?.backgroundColor||'')?data.appearance.backgroundColor:'#ffffff';
+    backgroundImageDataUrl=typeof data.appearance?.backgroundImageDataUrl==='string'?data.appearance.backgroundImageDataUrl:null;
+    logoDataUrl=typeof data.appearance?.logoDataUrl==='string'?data.appearance.logoDataUrl:null;
+    backgroundImageAverage=backgroundImageDataUrl ? await averageColorFromDataUrl(backgroundImageDataUrl) : null;
+    backgroundImageInput.value='';
+    logoInput.value='';
+
+    selectedElement='qr';
+    resizeStage();
+    updateMasterStage();
+    hideElementPopover();
+    statusEl.textContent=`Imported layout from ${file.name}. Student badge data was not changed.`;
+  }catch(err){
+    console.error(err);
+    statusEl.textContent=`Could not import layout: ${err.message}`;
+  }finally{
+    layoutFileInput.value='';
+  }
+}
 
 async function importPdf() {
   const file = pdfInput.files?.[0];
