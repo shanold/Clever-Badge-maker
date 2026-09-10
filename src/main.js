@@ -469,11 +469,32 @@ function positionElementPopover(target){
   const r=target.getBoundingClientRect();
   const popW=elementPopover.offsetWidth || 380;
   const popH=elementPopover.offsetHeight || 240;
-  let left=r.left-wrap.left + r.width/2 - 28;
-  let top=r.bottom-wrap.top + 12;
-  if(left+popW > wrap.width) left=Math.max(4, wrap.width-popW-4);
-  if(left<4) left=4;
-  if(top+popH > wrap.height+260) top=Math.max(4, r.top-wrap.top-popH-12);
+  const gap=16;
+
+  // Default: centered beneath the selected element with breathing room.
+  let left=r.left-wrap.left + r.width/2 - popW/2;
+  let top=r.bottom-wrap.top + gap;
+  let placement='below';
+
+  // Keep the bubble inside the browser viewport horizontally.
+  const viewportPad=12;
+  const screenLeft=wrap.left+left;
+  if(screenLeft < viewportPad) left += viewportPad-screenLeft;
+  const screenRight=wrap.left+left+popW;
+  if(screenRight > window.innerWidth-viewportPad) left -= screenRight-(window.innerWidth-viewportPad);
+
+  // Only flip above if the browser viewport genuinely has no room below.
+  const screenBottom=wrap.top+top+popH;
+  if(screenBottom > window.innerHeight-viewportPad){
+    const aboveTop=r.top-wrap.top-popH-gap;
+    const screenAboveTop=wrap.top+aboveTop;
+    if(screenAboveTop >= viewportPad){
+      top=aboveTop;
+      placement='above';
+    }
+  }
+
+  elementPopover.dataset.placement=placement;
   elementPopover.style.left=`${left}px`;
   elementPopover.style.top=`${top}px`;
 }
