@@ -482,7 +482,9 @@ function updateMasterStage(){
       if(ts?.shadow){
         const sx=Number(ts.shadowX ?? 2), sy=Number(ts.shadowY ?? 2), sizeAmt=Math.max(0,Number(ts.shadowSize ?? 2)), blur=Math.max(0,Number(ts.shadowBlur ?? 3));
         const alpha=Math.max(.1,Math.min(1,Number(ts.shadowOpacity ?? 55)/100));
-        el.style.textShadow=`${sx}px ${sy}px ${blur + sizeAmt*0.65}px ${hexToRgba(ts.shadowColor||'#000000',alpha)}`;
+        const color=hexToRgba(ts.shadowColor||'#000000',alpha);
+        const ring=sizeAmt>0 ? [[0,0],[sizeAmt,0],[-sizeAmt,0],[0,sizeAmt],[0,-sizeAmt]] : [[0,0]];
+        el.style.textShadow=ring.map(([dx,dy])=>`${sx+dx}px ${sy+dy}px ${blur}px ${color}`).join(', ');
       }else{
         el.style.textShadow='none';
       }
@@ -649,19 +651,18 @@ function drawCenteredAt(page,text,cx,cy,maxWidth,size,font,colorHex,style=null){
     const scale=size/18;
     const ox=(Number(style.shadowX ?? 2))*scale;
     const oy=-(Number(style.shadowY ?? 2))*scale; // CSS positive Y is down; PDF positive Y is up.
-    const sizeAmt=Math.max(0,Number(style.shadowSize ?? 2))*scale*.30;
-    const blur=Math.max(0,Number(style.shadowBlur ?? 3))*scale*.16;
+    const sizeAmt=Math.max(0,Number(style.shadowSize ?? 2))*scale*.22;
+    const blur=Math.max(0,Number(style.shadowBlur ?? 3))*scale*.12;
     const opacity=Math.max(.1,Math.min(1,Number(style.shadowOpacity ?? 55)/100));
-    const shadowFontSize=size+sizeAmt;
-    const shadowWidth=font.widthOfTextAtSize(fitted,shadowFontSize);
-    const shadowX=cx-shadowWidth/2+ox;
-    const shadowY=cy-shadowFontSize*.35+oy;
-    const samples=blur>0
-      ? [[0,0],[blur,0],[-blur,0],[0,blur],[0,-blur]]
-      : [[0,0]];
-    const eachOpacity=Math.min(.78,opacity/(blur>0?1.9:1));
-    for(const [bx,by] of samples){
-      page.drawText(fitted,{x:shadowX+bx,y:shadowY+by,size:shadowFontSize,font,color:rgb(sc.r,sc.g,sc.b),opacity:eachOpacity});
+    const shadowX=tx+ox;
+    const shadowY=ty+oy;
+    const thickness=sizeAmt>0 ? [[0,0],[sizeAmt,0],[-sizeAmt,0],[0,sizeAmt],[0,-sizeAmt]] : [[0,0]];
+    const softness=blur>0 ? [[0,0],[blur,0],[-blur,0],[0,blur],[0,-blur]] : [[0,0]];
+    const eachOpacity=Math.min(.72,opacity/Math.max(1,softness.length*0.8));
+    for(const [txo,tyo] of thickness){
+      for(const [bxo,byo] of softness){
+        page.drawText(fitted,{x:shadowX+txo+bxo,y:shadowY+tyo+byo,size,font,color:rgb(sc.r,sc.g,sc.b),opacity:eachOpacity});
+      }
     }
   }
   const c=hexToRgb(colorHex||'#17202a');

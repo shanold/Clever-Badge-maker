@@ -145,6 +145,7 @@ input[type="color"] { width:100%; height:42px; padding:3px; border:1px solid #c8
   .full-row { grid-column:1; }
 }
 
-.offset-pair { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:7px 8px; }
-.offset-pair .compact-slider { min-width:0; }
-@media (max-width:560px){ .offset-pair { grid-template-columns:minmax(0,1fr) minmax(0,1fr); } }
+.shadow-vector-row { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px 8px; width:100%; }
+.shadow-vector-row .compact-slider { min-width:0; }
+.shadow-vector-row input[type="range"] { width:100%; }
+@media (max-width:560px){ .shadow-vector-row { grid-template-columns:repeat(3,minmax(0,1fr)); } }
