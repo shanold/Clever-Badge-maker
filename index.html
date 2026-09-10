@@ -93,7 +93,24 @@
             <button id="clearBackgroundImageBtn" type="button" class="secondary full">Remove background image</button>
           </div>
 
-          <div class="element-editor">
+
+
+          <button id="resetLayoutBtn" type="button" class="secondary full">Reset layout</button>
+        </div>
+
+        <div class="master-stage-wrap">
+          <div id="masterStage" class="master-stage" aria-label="Master badge layout">
+            <div id="guideVertical" class="alignment-guide vertical" aria-hidden="true"></div>
+            <div id="guideHorizontal" class="alignment-guide horizontal" aria-hidden="true"></div>
+            <div class="master-element text-element" data-element="school" tabindex="0"><span class="element-content">School Name</span><span class="resize-handle" aria-hidden="true"></span></div>
+            <div class="master-element image-element logo-element" data-element="logo" tabindex="0"><span class="element-content placeholder">Logo</span><img class="element-content logo-image" alt="School logo" /><span class="resize-handle" aria-hidden="true"></span></div>
+            <div class="master-element image-element qr-element" data-element="qr" tabindex="0"><div class="element-content fake-qr">QR</div><span class="resize-handle" aria-hidden="true"></span></div>
+            <div class="master-element text-element name-element" data-element="name" tabindex="0"><span class="element-content">Student Name</span><span class="resize-handle" aria-hidden="true"></span></div>
+            <div class="master-element text-element" data-element="classLine" tabindex="0"><span class="element-content">Teacher • Grade • Class</span><span class="resize-handle" aria-hidden="true"></span></div>
+          </div>
+          <p class="hint center">Drag an element to move it. Center guides appear and snap when you reach the horizontal or vertical midpoint. Drag the lower-right handle to resize.</p>
+
+          <div class="element-editor preview-element-editor">
             <strong>Selected element</strong>
             <div id="selectedElementName" class="selected-name">QR code</div>
             <label>Size
@@ -128,21 +145,6 @@
               </div>
             </div>
           </div>
-
-          <button id="resetLayoutBtn" type="button" class="secondary full">Reset layout</button>
-        </div>
-
-        <div class="master-stage-wrap">
-          <div id="masterStage" class="master-stage" aria-label="Master badge layout">
-            <div id="guideVertical" class="alignment-guide vertical" aria-hidden="true"></div>
-            <div id="guideHorizontal" class="alignment-guide horizontal" aria-hidden="true"></div>
-            <div class="master-element text-element" data-element="school" tabindex="0"><span class="element-content">School Name</span><span class="resize-handle" aria-hidden="true"></span></div>
-            <div class="master-element image-element logo-element" data-element="logo" tabindex="0"><span class="element-content placeholder">Logo</span><img class="element-content logo-image" alt="School logo" /><span class="resize-handle" aria-hidden="true"></span></div>
-            <div class="master-element image-element qr-element" data-element="qr" tabindex="0"><div class="element-content fake-qr">QR</div><span class="resize-handle" aria-hidden="true"></span></div>
-            <div class="master-element text-element name-element" data-element="name" tabindex="0"><span class="element-content">Student Name</span><span class="resize-handle" aria-hidden="true"></span></div>
-            <div class="master-element text-element" data-element="classLine" tabindex="0"><span class="element-content">Teacher • Grade • Class</span><span class="resize-handle" aria-hidden="true"></span></div>
-          </div>
-          <p class="hint center">Drag an element to move it. Center guides appear and snap when you reach the horizontal or vertical midpoint. Drag the lower-right handle to resize.</p>
         </div>
       </div>
     </section>
