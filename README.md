@@ -59,5 +59,5 @@ Open `http://YOUR-SERVER-IP:8089`
 
 
 ## v0.5.4
-- Per-text-element drop shadows with enable/disable, color, and size controls.
+- Per-text-element drop shadows with enable/disable, color, X/Y offset, blur, and opacity controls.
 - Shadows appear in the master-card editor and are rendered into PDF preview/export.

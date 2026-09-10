@@ -112,10 +112,19 @@
                 <label>Shadow color
                   <input id="textShadowColor" type="color" value="#000000" />
                 </label>
-                <label>Shadow size <span id="textShadowSizeValue" class="subtle">3</span>
-                  <input id="textShadowSize" type="range" min="1" max="12" step="1" value="3" />
+                <label>Offset X <span id="textShadowXValue" class="subtle">2</span>
+                  <input id="textShadowX" type="range" min="-10" max="10" step="1" value="2" />
                 </label>
-                <span class="hint">Shadow settings are saved separately for each text element and are included in PDF preview/export.</span>
+                <label>Offset Y <span id="textShadowYValue" class="subtle">2</span>
+                  <input id="textShadowY" type="range" min="-10" max="10" step="1" value="2" />
+                </label>
+                <label>Blur <span id="textShadowBlurValue" class="subtle">3</span>
+                  <input id="textShadowBlur" type="range" min="0" max="10" step="1" value="3" />
+                </label>
+                <label>Opacity <span id="textShadowOpacityValue" class="subtle">55%</span>
+                  <input id="textShadowOpacity" type="range" min="10" max="100" step="5" value="55" />
+                </label>
+                <span class="hint">A real single-direction shadow: move it with X/Y, soften it with Blur, and control its strength with Opacity.</span>
               </div>
             </div>
           </div>
