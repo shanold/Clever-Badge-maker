@@ -113,35 +113,37 @@
           <div class="element-editor preview-element-editor">
             <strong>Selected element</strong>
             <div id="selectedElementName" class="selected-name">QR code</div>
-            <label>Size
-              <input id="elementSize" type="range" min="4" max="90" value="45" />
-            </label>
-            <span class="hint">You can also resize directly from the corner handle on the card.</span>
-            <label class="inline-check"><input id="elementVisible" type="checkbox" checked /> Show this element</label>
-            <div id="textColorControls" class="text-color-controls">
-              <label class="inline-check"><input id="autoTextColor" type="checkbox" checked /> Auto text color</label>
-              <label>Manual text color
+            <div class="compact-control-grid base-controls">
+              <label class="compact-slider">Size
+                <input id="elementSize" type="range" min="4" max="90" value="45" />
+              </label>
+              <label class="inline-check compact-check"><input id="elementVisible" type="checkbox" checked /> Show this element</label>
+            </div>
+            <span class="hint compact-hint">You can also resize directly from the corner handle on the card.</span>
+            <div id="textColorControls" class="text-color-controls compact-control-grid">
+              <label class="inline-check compact-check"><input id="autoTextColor" type="checkbox" checked /> Auto text color</label>
+              <label class="compact-color">Manual text color
                 <input id="manualTextColor" type="color" value="#17202a" />
               </label>
-              <span class="hint">Auto chooses a readable complementary color from the card background. Turn Auto off to force this element's color.</span>
-              <div class="shadow-controls">
-                <label class="inline-check"><input id="textShadowEnabled" type="checkbox" /> Drop shadow</label>
-                <label>Shadow color
+              <span class="hint compact-hint full-row">Auto chooses a readable complementary color from the card background. Turn Auto off to force this element's color.</span>
+              <div class="shadow-controls full-row compact-control-grid">
+                <label class="inline-check compact-check"><input id="textShadowEnabled" type="checkbox" /> Drop shadow</label>
+                <label class="compact-color">Shadow color
                   <input id="textShadowColor" type="color" value="#000000" />
                 </label>
-                <label>Offset X <span id="textShadowXValue" class="subtle">2</span>
+                <label class="compact-slider">Offset X <span id="textShadowXValue" class="subtle">2</span>
                   <input id="textShadowX" type="range" min="-10" max="10" step="1" value="2" />
                 </label>
-                <label>Offset Y <span id="textShadowYValue" class="subtle">2</span>
+                <label class="compact-slider">Offset Y <span id="textShadowYValue" class="subtle">2</span>
                   <input id="textShadowY" type="range" min="-10" max="10" step="1" value="2" />
                 </label>
-                <label>Blur <span id="textShadowBlurValue" class="subtle">3</span>
+                <label class="compact-slider">Blur <span id="textShadowBlurValue" class="subtle">3</span>
                   <input id="textShadowBlur" type="range" min="0" max="10" step="1" value="3" />
                 </label>
-                <label>Opacity <span id="textShadowOpacityValue" class="subtle">55%</span>
+                <label class="compact-slider">Opacity <span id="textShadowOpacityValue" class="subtle">55%</span>
                   <input id="textShadowOpacity" type="range" min="10" max="100" step="5" value="55" />
                 </label>
-                <span class="hint">A real single-direction shadow: move it with X/Y, soften it with Blur, and control its strength with Opacity.</span>
+                <span class="hint compact-hint full-row">Move with X/Y, soften with Blur, and control strength with Opacity.</span>
               </div>
             </div>
           </div>
