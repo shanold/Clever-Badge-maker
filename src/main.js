@@ -407,7 +407,7 @@ function updateButtons(){
 }
 
 function applyPreset(){
-  const presets={ portrait:[2.5,3.5], landscape:[3.5,2.5], wide:[4,2.25], square:[3,3] };
+  const presets={ portrait:[2.3,3.3], landscape:[3.5,2.5], wide:[4,2.25], square:[3,3] };
   if(presets[cardPreset.value]){
     [cardWidth.value,cardHeight.value]=presets[cardPreset.value];
     layout=structuredClone(layoutPresets[cardPreset.value]);
@@ -418,7 +418,7 @@ function applyPreset(){
 }
 function onCustomSize(){ cardPreset.value='custom'; resizeStage(); }
 function resizeStage(){
-  const w=Math.max(1.5,Number(cardWidth.value)||2.5), h=Math.max(1.5,Number(cardHeight.value)||3.5);
+  const w=Math.max(1.5,Number(cardWidth.value)||2.3), h=Math.max(1.5,Number(cardHeight.value)||3.3);
   const maxW=480,maxH=430;
   const scale=Math.min(maxW/w,maxH/h);
   masterStage.style.width=`${Math.round(w*scale)}px`;
@@ -704,16 +704,37 @@ function shadowLayers(style, scale=1){
   const blurAmt=Math.max(0,Number(style.shadowBlur ?? 3))*scale;
   const opacity=Math.max(.1,Math.min(1,Number(style.shadowOpacity ?? 55)/100));
   const pts=[];
-  const add=(x,y,w)=>pts.push({x:ox+x,y:oy+y,opacity:Math.min(.85,opacity*w)});
+  const add=(x,y,w)=>pts.push({x:ox+x,y:oy+y,opacity:Math.min(.88,opacity*w)});
+
+  // Solid shadow core. Size increases thickness without softening the edge.
   add(0,0,1);
   if(sizeAmt>0){
-    const r=sizeAmt*.42;
-    add(r,0,.58); add(-r,0,.58); add(0,r,.58); add(0,-r,.58);
-    add(r*.7,r*.7,.42); add(-r*.7,r*.7,.42); add(r*.7,-r*.7,.42); add(-r*.7,-r*.7,.42);
+    const coreR=Math.max(.35,sizeAmt*.5);
+    const coreSteps=Math.max(1,Math.min(3,Math.ceil(sizeAmt/2)));
+    for(let ring=1; ring<=coreSteps; ring++){
+      const r=coreR*(ring/coreSteps);
+      for(let i=0;i<8;i++){
+        const a=Math.PI*2*i/8;
+        add(Math.cos(a)*r,Math.sin(a)*r,.62);
+      }
+    }
   }
+
+  // Soft falloff outside the core. Blur changes softness/radius only.
   if(blurAmt>0){
-    const r=blurAmt*.28;
-    add(r,0,.20); add(-r,0,.20); add(0,r,.20); add(0,-r,.20);
+    const coreR=sizeAmt>0 ? Math.max(.35,sizeAmt*.5) : 0;
+    const blurR=Math.max(.5,blurAmt*.72);
+    const rings=Math.max(2,Math.min(6,Math.ceil(blurAmt/2)+1));
+    for(let ring=1; ring<=rings; ring++){
+      const t=ring/rings;
+      const r=coreR+blurR*t;
+      const weight=.28*(1-t)+.05;
+      const points=12;
+      for(let i=0;i<points;i++){
+        const a=Math.PI*2*i/points;
+        add(Math.cos(a)*r,Math.sin(a)*r,weight);
+      }
+    }
   }
   return pts;
 }
