@@ -40,13 +40,9 @@ const autoTextColor = $('#autoTextColor');
 const manualTextColor = $('#manualTextColor');
 const textShadowEnabled = $('#textShadowEnabled');
 const textShadowColor = $('#textShadowColor');
-const textShadowX = $('#textShadowX');
-const textShadowY = $('#textShadowY');
 const textShadowSize = $('#textShadowSize');
 const textShadowBlur = $('#textShadowBlur');
 const textShadowOpacity = $('#textShadowOpacity');
-const textShadowXValue = $('#textShadowXValue');
-const textShadowYValue = $('#textShadowYValue');
 const textShadowSizeValue = $('#textShadowSizeValue');
 const textShadowBlurValue = $('#textShadowBlurValue');
 const textShadowOpacityValue = $('#textShadowOpacityValue');
@@ -93,9 +89,9 @@ const defaults = structuredClone(layoutPresets.portrait);
 let layout = structuredClone(defaults);
 const labels = { qr:'QR code', name:'Student name', school:'School name', logo:'Logo', classLine:'Teacher / Grade / Class' };
 const textStyles = {
-  school: { auto: true, color: '#17202a', shadow: false, shadowColor: '#000000', shadowX: 2, shadowY: 2, shadowSize: 2, shadowBlur: 3, shadowOpacity: 55 },
-  name: { auto: true, color: '#17202a', shadow: false, shadowColor: '#000000', shadowX: 2, shadowY: 2, shadowSize: 2, shadowBlur: 3, shadowOpacity: 55 },
-  classLine: { auto: true, color: '#17202a', shadow: false, shadowColor: '#000000', shadowX: 2, shadowY: 2, shadowSize: 2, shadowBlur: 3, shadowOpacity: 55 },
+  school: { auto: true, color: '#17202a', shadow: false, shadowColor: '#000000', shadowX: 0, shadowY: 0, shadowSize: 2, shadowBlur: 2, shadowOpacity: 90 },
+  name: { auto: true, color: '#17202a', shadow: false, shadowColor: '#000000', shadowX: 0, shadowY: 0, shadowSize: 2, shadowBlur: 2, shadowOpacity: 90 },
+  classLine: { auto: true, color: '#17202a', shadow: false, shadowColor: '#000000', shadowX: 0, shadowY: 0, shadowSize: 2, shadowBlur: 2, shadowOpacity: 90 },
 };
 
 pdfInput.addEventListener('change', importPdf);
@@ -136,7 +132,7 @@ textShadowEnabled.addEventListener('change', () => {
   if(!textStyles[selectedElement]) return;
   textStyles[selectedElement].shadow = textShadowEnabled.checked;
   textShadowColor.disabled=!textShadowEnabled.checked;
-  [textShadowX,textShadowY,textShadowSize,textShadowBlur,textShadowOpacity].forEach(i=>i.disabled=!textShadowEnabled.checked);
+  [textShadowSize,textShadowBlur,textShadowOpacity].forEach(i=>i.disabled=!textShadowEnabled.checked);
   updateMasterStage();
 });
 textShadowColor.addEventListener('input', () => {
@@ -145,8 +141,6 @@ textShadowColor.addEventListener('input', () => {
   updateMasterStage();
 });
 for(const [input,key,out,fmt] of [
-  [textShadowX,'shadowX',textShadowXValue,v=>v],
-  [textShadowY,'shadowY',textShadowYValue,v=>v],
   [textShadowSize,'shadowSize',textShadowSizeValue,v=>v],
   [textShadowBlur,'shadowBlur',textShadowBlurValue,v=>v],
   [textShadowOpacity,'shadowOpacity',textShadowOpacityValue,v=>`${v}%`],
@@ -441,18 +435,14 @@ function selectMasterElement(key){
     manualTextColor.disabled=textStyles[key].auto;
     textShadowEnabled.checked=!!textStyles[key].shadow;
     textShadowColor.value=textStyles[key].shadowColor||'#000000';
-    textShadowX.value=textStyles[key].shadowX ?? 2;
-    textShadowY.value=textStyles[key].shadowY ?? 2;
     textShadowSize.value=textStyles[key].shadowSize ?? 2;
-    textShadowBlur.value=textStyles[key].shadowBlur ?? 3;
-    textShadowOpacity.value=textStyles[key].shadowOpacity ?? 55;
-    textShadowXValue.textContent=textShadowX.value;
-    textShadowYValue.textContent=textShadowY.value;
+    textShadowBlur.value=textStyles[key].shadowBlur ?? 2;
+    textShadowOpacity.value=textStyles[key].shadowOpacity ?? 90;
     textShadowSizeValue.textContent=textShadowSize.value;
     textShadowBlurValue.textContent=textShadowBlur.value;
     textShadowOpacityValue.textContent=`${textShadowOpacity.value}%`;
     textShadowColor.disabled=!textStyles[key].shadow;
-    [textShadowX,textShadowY,textShadowSize,textShadowBlur,textShadowOpacity].forEach(i=>i.disabled=!textStyles[key].shadow);
+    [textShadowSize,textShadowBlur,textShadowOpacity].forEach(i=>i.disabled=!textStyles[key].shadow);
   }
 }
 
@@ -698,11 +688,11 @@ async function drawCard(page,pdf,badge,x,y,w,h,font,bold,logoImage){
 }
 
 function shadowLayers(style, scale=1){
-  const ox=Number(style.shadowX ?? 2)*scale;
-  const oy=Number(style.shadowY ?? 2)*scale;
+  const ox=0;
+  const oy=0;
   const sizeAmt=Math.max(0,Number(style.shadowSize ?? 2))*scale;
-  const blurAmt=Math.max(0,Number(style.shadowBlur ?? 3))*scale;
-  const opacity=Math.max(.1,Math.min(1,Number(style.shadowOpacity ?? 55)/100));
+  const blurAmt=Math.max(0,Number(style.shadowBlur ?? 2))*scale;
+  const opacity=Math.max(.1,Math.min(1,Number(style.shadowOpacity ?? 90)/100));
   const pts=[];
   const add=(x,y,w)=>pts.push({x:ox+x,y:oy+y,opacity:Math.min(.88,opacity*w)});
 
@@ -765,11 +755,11 @@ function renderTextEffectPng(text,textWidthPt,sizePt,colorHex,style,isBold){
   // Render at high resolution so the PDF gets a smooth, real canvas blur rather
   // than dozens of overlapping vector text copies.
   const scale=4;
-  const ox=Number(style.shadowX ?? 2);
-  const oy=Number(style.shadowY ?? 2);
+  const ox=0;
+  const oy=0;
   const core=Math.max(0,Number(style.shadowSize ?? 2));
-  const blur=Math.max(0,Number(style.shadowBlur ?? 3));
-  const opacity=Math.max(.1,Math.min(1,Number(style.shadowOpacity ?? 55)/100));
+  const blur=Math.max(0,Number(style.shadowBlur ?? 2));
+  const opacity=Math.max(.1,Math.min(1,Number(style.shadowOpacity ?? 90)/100));
   const reach=core+blur*1.8+Math.max(Math.abs(ox),Math.abs(oy))+3;
   const padLeft=reach+Math.max(0,-ox);
   const padRight=reach+Math.max(0,ox);

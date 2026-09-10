@@ -131,24 +131,16 @@
                 <label class="compact-color">Shadow color
                   <input id="textShadowColor" type="color" value="#000000" />
                 </label>
-                <div class="shadow-vector-row full-row">
-                  <label class="compact-slider">Offset X <span id="textShadowXValue" class="subtle">2</span>
-                    <input id="textShadowX" type="range" min="-10" max="10" step="1" value="2" />
-                  </label>
-                  <label class="compact-slider">Offset Y <span id="textShadowYValue" class="subtle">2</span>
-                    <input id="textShadowY" type="range" min="-10" max="10" step="1" value="2" />
-                  </label>
-                  <label class="compact-slider">Size <span id="textShadowSizeValue" class="subtle">2</span>
-                    <input id="textShadowSize" type="range" min="0" max="8" step="1" value="2" />
-                  </label>
-                </div>
-                <label class="compact-slider">Blur <span id="textShadowBlurValue" class="subtle">3</span>
-                  <input id="textShadowBlur" type="range" min="0" max="10" step="1" value="3" />
+                <label class="compact-slider">Size <span id="textShadowSizeValue" class="subtle">2</span>
+                  <input id="textShadowSize" type="range" min="0" max="5.5" step="0.5" value="2" />
                 </label>
-                <label class="compact-slider">Opacity <span id="textShadowOpacityValue" class="subtle">55%</span>
-                  <input id="textShadowOpacity" type="range" min="10" max="100" step="5" value="55" />
+                <label class="compact-slider">Blur <span id="textShadowBlurValue" class="subtle">2</span>
+                  <input id="textShadowBlur" type="range" min="0" max="10" step="1" value="2" />
                 </label>
-                <span class="hint compact-hint full-row">Move with X/Y, thicken with Size, soften with Blur, and control strength with Opacity.</span>
+                <label class="compact-slider">Opacity <span id="textShadowOpacityValue" class="subtle">90%</span>
+                  <input id="textShadowOpacity" type="range" min="10" max="100" step="5" value="90" />
+                </label>
+                <span class="hint compact-hint full-row">Thicken with Size, soften with Blur, and control strength with Opacity. Shadow offset is fixed at zero.</span>
               </div>
             </div>
           </div>
