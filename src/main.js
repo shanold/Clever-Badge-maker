@@ -28,6 +28,7 @@ const guideHorizontal = $('#guideHorizontal');
 const elementSize = $('#elementSize');
 const elementVisible = $('#elementVisible');
 const selectedElementName = $('#selectedElementName');
+const elementPopover = $('#elementPopover');
 const resetLayoutBtn = $('#resetLayoutBtn');
 const studentSearch = $('#studentSearch');
 const clearSearchBtn = $('#clearSearchBtn');
@@ -203,6 +204,7 @@ window.addEventListener('pointerup', endDrag);
 applyPreset();
 selectMasterElement('qr');
 updateMasterStage();
+hideElementPopover();
 
 async function importPdf() {
   const file = pdfInput.files?.[0];
@@ -432,6 +434,7 @@ function selectMasterElement(key){
   elementVisible.checked=layout[key].visible;
   const isText=!!textStyles[key];
   textColorControls.style.display=isText?'grid':'none';
+  showElementPopover(key);
   if(isText){
     autoTextColor.checked=textStyles[key].auto;
     manualTextColor.value=textStyles[key].color;
@@ -452,6 +455,41 @@ function selectMasterElement(key){
     [textShadowX,textShadowY,textShadowSize,textShadowBlur,textShadowOpacity].forEach(i=>i.disabled=!textStyles[key].shadow);
   }
 }
+
+function showElementPopover(key){
+  const target=masterStage.querySelector(`[data-element="${key}"]`);
+  if(!target || !layout[key]?.visible) return;
+  elementPopover.hidden=false;
+  requestAnimationFrame(()=>positionElementPopover(target));
+}
+
+function positionElementPopover(target){
+  if(elementPopover.hidden || !target) return;
+  const wrap=masterStage.parentElement.getBoundingClientRect();
+  const r=target.getBoundingClientRect();
+  const popW=elementPopover.offsetWidth || 380;
+  const popH=elementPopover.offsetHeight || 240;
+  let left=r.left-wrap.left + r.width/2 - 28;
+  let top=r.bottom-wrap.top + 12;
+  if(left+popW > wrap.width) left=Math.max(4, wrap.width-popW-4);
+  if(left<4) left=4;
+  if(top+popH > wrap.height+260) top=Math.max(4, r.top-wrap.top-popH-12);
+  elementPopover.style.left=`${left}px`;
+  elementPopover.style.top=`${top}px`;
+}
+
+function hideElementPopover(){ elementPopover.hidden=true; }
+
+document.addEventListener('pointerdown',(e)=>{
+  if(elementPopover.hidden) return;
+  if(elementPopover.contains(e.target)) return;
+  if(e.target.closest('.master-element')) return;
+  hideElementPopover();
+});
+window.addEventListener('resize',()=>{
+  const target=masterStage.querySelector(`[data-element="${selectedElement}"]`);
+  if(target && !elementPopover.hidden) positionElementPopover(target);
+});
 
 function updateMasterStage(){
   const school=masterStage.querySelector('[data-element="school"] .element-content');
@@ -480,17 +518,16 @@ function updateMasterStage(){
       el.style.color=resolvedTextColor(key);
       const ts=textStyles[key];
       if(ts?.shadow){
-        const sx=Number(ts.shadowX ?? 2), sy=Number(ts.shadowY ?? 2), sizeAmt=Math.max(0,Number(ts.shadowSize ?? 2)), blur=Math.max(0,Number(ts.shadowBlur ?? 3));
-        const alpha=Math.max(.1,Math.min(1,Number(ts.shadowOpacity ?? 55)/100));
-        const color=hexToRgba(ts.shadowColor||'#000000',alpha);
-        const ring=sizeAmt>0 ? [[0,0],[sizeAmt,0],[-sizeAmt,0],[0,sizeAmt],[0,-sizeAmt]] : [[0,0]];
-        el.style.textShadow=ring.map(([dx,dy])=>`${sx+dx}px ${sy+dy}px ${blur}px ${color}`).join(', ');
+        const layers = shadowLayers(ts, 1);
+        el.style.textShadow = layers.map(l => `${l.x}px ${l.y}px 0 ${hexToRgba(ts.shadowColor||'#000000', l.opacity)}`).join(', ');
       }else{
         el.style.textShadow='none';
       }
     }
   });
   selectMasterElement(selectedElement);
+  const activeTarget=masterStage.querySelector(`[data-element="${selectedElement}"]`);
+  if(activeTarget && !elementPopover.hidden) positionElementPopover(activeTarget);
 }
 
 function beginInteraction(e){
@@ -639,6 +676,27 @@ async function drawCard(page,pdf,badge,x,y,w,h,font,bold,logoImage){
   }
 }
 
+function shadowLayers(style, scale=1){
+  const ox=Number(style.shadowX ?? 2)*scale;
+  const oy=Number(style.shadowY ?? 2)*scale;
+  const sizeAmt=Math.max(0,Number(style.shadowSize ?? 2))*scale;
+  const blurAmt=Math.max(0,Number(style.shadowBlur ?? 3))*scale;
+  const opacity=Math.max(.1,Math.min(1,Number(style.shadowOpacity ?? 55)/100));
+  const pts=[];
+  const add=(x,y,w)=>pts.push({x:ox+x,y:oy+y,opacity:Math.min(.85,opacity*w)});
+  add(0,0,1);
+  if(sizeAmt>0){
+    const r=sizeAmt*.42;
+    add(r,0,.58); add(-r,0,.58); add(0,r,.58); add(0,-r,.58);
+    add(r*.7,r*.7,.42); add(-r*.7,r*.7,.42); add(r*.7,-r*.7,.42); add(-r*.7,-r*.7,.42);
+  }
+  if(blurAmt>0){
+    const r=blurAmt*.28;
+    add(r,0,.20); add(-r,0,.20); add(0,r,.20); add(0,-r,.20);
+  }
+  return pts;
+}
+
 function drawCenteredAt(page,text,cx,cy,maxWidth,size,font,colorHex,style=null){
   if(!text)return;
   const fitted=fitText(text,maxWidth,size,font);
@@ -646,23 +704,16 @@ function drawCenteredAt(page,text,cx,cy,maxWidth,size,font,colorHex,style=null){
   const tx=cx-tw/2, ty=cy-size*.35;
   if(style?.shadow){
     const sc=hexToRgb(style.shadowColor||'#000000');
-    // PDF has no native CSS-style blur. Keep every softening sample tightly clustered
-    // around one shadow center so it reads as one shadow, never repeated ghost text.
     const scale=size/18;
-    const ox=(Number(style.shadowX ?? 2))*scale;
-    const oy=-(Number(style.shadowY ?? 2))*scale; // CSS positive Y is down; PDF positive Y is up.
-    const sizeAmt=Math.max(0,Number(style.shadowSize ?? 2))*scale*.22;
-    const blur=Math.max(0,Number(style.shadowBlur ?? 3))*scale*.12;
-    const opacity=Math.max(.1,Math.min(1,Number(style.shadowOpacity ?? 55)/100));
-    const shadowX=tx+ox;
-    const shadowY=ty+oy;
-    const thickness=sizeAmt>0 ? [[0,0],[sizeAmt,0],[-sizeAmt,0],[0,sizeAmt],[0,-sizeAmt]] : [[0,0]];
-    const softness=blur>0 ? [[0,0],[blur,0],[-blur,0],[0,blur],[0,-blur]] : [[0,0]];
-    const eachOpacity=Math.min(.72,opacity/Math.max(1,softness.length*0.8));
-    for(const [txo,tyo] of thickness){
-      for(const [bxo,byo] of softness){
-        page.drawText(fitted,{x:shadowX+txo+bxo,y:shadowY+tyo+byo,size,font,color:rgb(sc.r,sc.g,sc.b),opacity:eachOpacity});
-      }
+    for(const layer of shadowLayers(style, scale)){
+      page.drawText(fitted,{
+        x:tx+layer.x,
+        y:ty-layer.y,
+        size,
+        font,
+        color:rgb(sc.r,sc.g,sc.b),
+        opacity:layer.opacity
+      });
     }
   }
   const c=hexToRgb(colorHex||'#17202a');
