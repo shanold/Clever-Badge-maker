@@ -565,7 +565,7 @@ function moveDrag(e){
   if(!dragState)return;
   if(dragState.mode==='resize'){
     const distance=Math.max(4,Math.hypot(e.clientX-dragState.centerX,e.clientY-dragState.centerY));
-    layout[dragState.key].size=Math.max(4,Math.min(90,dragState.startSize*(distance/dragState.startDistance)));
+    layout[dragState.key].size=Math.max(4,Math.min(63,dragState.startSize*(distance/dragState.startDistance)));
     elementSize.value=Math.round(layout[dragState.key].size);
   }else{
     const r=masterStage.getBoundingClientRect();
@@ -757,8 +757,9 @@ function renderTextEffectPng(text,textWidthPt,sizePt,colorHex,style,isBold){
   const scale=4;
   const ox=0;
   const oy=0;
-  const core=Math.max(0,Number(style.shadowSize ?? 2));
-  const blur=Math.max(0,Number(style.shadowBlur ?? 2));
+  const pdfShadowScale=0.5;
+  const core=Math.max(0,Number(style.shadowSize ?? 2))*pdfShadowScale;
+  const blur=Math.max(0,Number(style.shadowBlur ?? 2))*pdfShadowScale;
   const opacity=Math.max(.1,Math.min(1,Number(style.shadowOpacity ?? 90)/100));
   const reach=core+blur*1.8+Math.max(Math.abs(ox),Math.abs(oy))+3;
   const padLeft=reach+Math.max(0,-ox);
@@ -777,9 +778,11 @@ function renderTextEffectPng(text,textWidthPt,sizePt,colorHex,style,isBold){
   ctx.textAlign='left';
   ctx.textBaseline='alphabetic';
   const x=padLeft;
-  // Baseline placement chosen so the image's PDF anchor matches the old
-  // drawText baseline closely while leaving room for blur above/below.
-  const baseline=padBottom+sizePt*.95;
+  // Canvas Y runs from the top down, while PDF image placement is anchored
+  // from the bottom up. Put the canvas baseline exactly padBottom points above
+  // the image bottom so, after drawing at y: ty - padBottom, the text baseline
+  // lands at the same PDF y-coordinate (ty) as ordinary page.drawText().
+  const baseline=heightPt-padBottom;
   const shadow=hexToRgb255(style.shadowColor||'#000000');
   ctx.globalAlpha=opacity;
   ctx.fillStyle=`rgb(${shadow.r},${shadow.g},${shadow.b})`;
