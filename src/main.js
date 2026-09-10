@@ -688,11 +688,11 @@ async function drawCard(page,pdf,badge,x,y,w,h,font,bold,logoImage){
       const iw=logoImage.width*ratio, ih=logoImage.height*ratio;
       page.drawImage(logoImage,{x:cx-iw/2,y:cy-ih/2,width:iw,height:ih});
     }else if(key==='school'){
-      drawCenteredAt(page,schoolNameInput.value.trim(),cx,cy,w*.9,Math.max(6,cfg.size*.85),bold,resolvedTextColor('school'),textStyles.school);
+      await drawCenteredAt(page,pdf,schoolNameInput.value.trim(),cx,cy,w*.9,Math.max(6,cfg.size*.85),bold,resolvedTextColor('school'),textStyles.school,true);
     }else if(key==='name'){
-      drawCenteredAt(page,badge.name,cx,cy,w*.92,Math.max(7,cfg.size*.95),bold,resolvedTextColor('name'),textStyles.name);
+      await drawCenteredAt(page,pdf,badge.name,cx,cy,w*.92,Math.max(7,cfg.size*.95),bold,resolvedTextColor('name'),textStyles.name,true);
     }else if(key==='classLine'){
-      drawCenteredAt(page,classNameInput.value.trim(),cx,cy,w*.92,Math.max(6,cfg.size*.9),font,resolvedTextColor('classLine'),textStyles.classLine);
+      await drawCenteredAt(page,pdf,classNameInput.value.trim(),cx,cy,w*.92,Math.max(6,cfg.size*.9),font,resolvedTextColor('classLine'),textStyles.classLine,false);
     }
   }
 }
@@ -739,27 +739,86 @@ function shadowLayers(style, scale=1){
   return pts;
 }
 
-function drawCenteredAt(page,text,cx,cy,maxWidth,size,font,colorHex,style=null){
+async function drawCenteredAt(page,pdf,text,cx,cy,maxWidth,size,font,colorHex,style=null,isBold=false){
   if(!text)return;
   const fitted=fitText(text,maxWidth,size,font);
   const tw=font.widthOfTextAtSize(fitted,size);
   const tx=cx-tw/2, ty=cy-size*.35;
+
   if(style?.shadow){
-    const sc=hexToRgb(style.shadowColor||'#000000');
-    const scale=size/18;
-    for(const layer of shadowLayers(style, scale)){
-      page.drawText(fitted,{
-        x:tx+layer.x,
-        y:ty-layer.y,
-        size,
-        font,
-        color:rgb(sc.r,sc.g,sc.b),
-        opacity:layer.opacity
-      });
-    }
+    const effect=renderTextEffectPng(fitted,tw,size,colorHex,style,isBold);
+    const image=await pdf.embedPng(effect.dataUrl);
+    page.drawImage(image,{
+      x:tx-effect.padLeft,
+      y:ty-effect.padBottom,
+      width:effect.widthPt,
+      height:effect.heightPt
+    });
+    return;
   }
+
   const c=hexToRgb(colorHex||'#17202a');
   page.drawText(fitted,{x:tx,y:ty,size,font,color:rgb(c.r,c.g,c.b)});
+}
+
+function renderTextEffectPng(text,textWidthPt,sizePt,colorHex,style,isBold){
+  // Render at high resolution so the PDF gets a smooth, real canvas blur rather
+  // than dozens of overlapping vector text copies.
+  const scale=4;
+  const ox=Number(style.shadowX ?? 2);
+  const oy=Number(style.shadowY ?? 2);
+  const core=Math.max(0,Number(style.shadowSize ?? 2));
+  const blur=Math.max(0,Number(style.shadowBlur ?? 3));
+  const opacity=Math.max(.1,Math.min(1,Number(style.shadowOpacity ?? 55)/100));
+  const reach=core+blur*1.8+Math.max(Math.abs(ox),Math.abs(oy))+3;
+  const padLeft=reach+Math.max(0,-ox);
+  const padRight=reach+Math.max(0,ox);
+  const padBottom=reach+Math.max(0,oy);
+  const padTop=reach+Math.max(0,-oy)+sizePt*.75;
+  const widthPt=Math.max(1,textWidthPt+padLeft+padRight);
+  const heightPt=Math.max(1,sizePt*1.55+padTop+padBottom);
+
+  const canvas=document.createElement('canvas');
+  canvas.width=Math.ceil(widthPt*scale);
+  canvas.height=Math.ceil(heightPt*scale);
+  const ctx=canvas.getContext('2d');
+  ctx.scale(scale,scale);
+  ctx.font=`${isBold ? '700' : '400'} ${sizePt}px Arial, Helvetica, sans-serif`;
+  ctx.textAlign='left';
+  ctx.textBaseline='alphabetic';
+  const x=padLeft;
+  // Baseline placement chosen so the image's PDF anchor matches the old
+  // drawText baseline closely while leaving room for blur above/below.
+  const baseline=padBottom+sizePt*.95;
+  const shadow=hexToRgb255(style.shadowColor||'#000000');
+  ctx.globalAlpha=opacity;
+  ctx.fillStyle=`rgb(${shadow.r},${shadow.g},${shadow.b})`;
+  ctx.strokeStyle=ctx.fillStyle;
+  ctx.lineJoin='round';
+  ctx.lineWidth=Math.max(0,core*1.35);
+  ctx.shadowColor=`rgba(${shadow.r},${shadow.g},${shadow.b},${Math.min(1,opacity)})`;
+  ctx.shadowBlur=blur*2;
+  ctx.shadowOffsetX=0;
+  ctx.shadowOffsetY=0;
+  if(core>0) ctx.strokeText(text,x+ox,baseline+oy);
+  ctx.fillText(text,x+ox,baseline+oy);
+
+  ctx.globalAlpha=1;
+  ctx.shadowColor='transparent';
+  ctx.shadowBlur=0;
+  ctx.shadowOffsetX=0;
+  ctx.shadowOffsetY=0;
+  ctx.lineWidth=0;
+  ctx.fillStyle=colorHex||'#17202a';
+  ctx.fillText(text,x,baseline);
+
+  return {
+    dataUrl:canvas.toDataURL('image/png'),
+    widthPt,
+    heightPt,
+    padLeft,
+    padBottom
+  };
 }
 
 function resolvedTextColor(key){
